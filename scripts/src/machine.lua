@@ -1476,6 +1476,7 @@ end
 --
 --@src/devices/machine/eeprom.h,MACHINES["EEPROMDEV"] = true
 --@src/devices/machine/eepromser.h,MACHINES["EEPROMDEV"] = true
+--@src/devices/machine/eepromspi.h,MACHINES["EEPROMDEV"] = true
 --@src/devices/machine/eeprompar.h,MACHINES["EEPROMDEV"] = true
 ---------------------------------------------------
 
@@ -1485,6 +1486,8 @@ if MACHINES["EEPROMDEV"] then
 		MAME_DIR .. "src/devices/machine/eeprom.h",
 		MAME_DIR .. "src/devices/machine/eepromser.cpp",
 		MAME_DIR .. "src/devices/machine/eepromser.h",
+		MAME_DIR .. "src/devices/machine/eepromspi.cpp",
+		MAME_DIR .. "src/devices/machine/eepromspi.h",
 		MAME_DIR .. "src/devices/machine/eeprompar.cpp",
 		MAME_DIR .. "src/devices/machine/eeprompar.h",
 	}
@@ -2328,30 +2331,6 @@ if MACHINES["M6M80011AP"] then
 	files {
 		MAME_DIR .. "src/devices/machine/m6m80011ap.cpp",
 		MAME_DIR .. "src/devices/machine/m6m80011ap.h",
-	}
-end
-
----------------------------------------------------
---
---@src/devices/machine/m950x0.h,MACHINES["M950X0"] = true
----------------------------------------------------
-
-if MACHINES["M950X0"] then
-	files {
-		MAME_DIR .. "src/devices/machine/m950x0.cpp",
-		MAME_DIR .. "src/devices/machine/m950x0.h",
-	}
-end
-
----------------------------------------------------
---
---@src/devices/machine/m95320.h,MACHINES["M95320"] = true
----------------------------------------------------
-
-if MACHINES["M95320"] then
-	files {
-		MAME_DIR .. "src/devices/machine/m95320.cpp",
-		MAME_DIR .. "src/devices/machine/m95320.h",
 	}
 end
 
@@ -5771,6 +5750,25 @@ if MACHINES["ALPSDPG23"] then
 	files {
 		MAME_DIR .. "src/devices/machine/alpsdpg23.cpp",
 		MAME_DIR .. "src/devices/machine/alpsdpg23.h",
+	}
+end
+
+---------------------------------------------------
+--
+--@src/devices/machine/cgp220.h,MACHINES["CGP220"] = true
+---------------------------------------------------
+if MACHINES["CGP220"] then
+	files {
+		MAME_DIR .. "src/devices/machine/cgp220.cpp",
+		MAME_DIR .. "src/devices/machine/cgp220.h",
+	}
+
+	dependency {
+		{ MAME_DIR .. "src/devices/machine/cgp220.cpp", GEN_DIR .. "emu/layout/cgp220.lh" },
+	}
+
+	custombuildtask {
+		layoutbuildtask("emu/layout", "cgp220"),
 	}
 end
 

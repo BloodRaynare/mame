@@ -1408,6 +1408,8 @@ if CPUS["I386"] then
 		MAME_DIR .. "src/devices/cpu/i386/pentops.hxx",
 		MAME_DIR .. "src/devices/cpu/i386/x87ops.hxx",
 		MAME_DIR .. "src/devices/cpu/i386/x87priv.h",
+		MAME_DIR .. "src/devices/cpu/i386/x87slot.cpp",
+		MAME_DIR .. "src/devices/cpu/i386/x87slot.h",
 		MAME_DIR .. "src/devices/cpu/i386/cpuidmsrs.hxx",
 	}
 end
@@ -3074,6 +3076,7 @@ if CPUS["TMS320C82"] then
 		MAME_DIR .. "src/devices/cpu/tms320c82/tms320c82.cpp",
 		MAME_DIR .. "src/devices/cpu/tms320c82/tms320c82.h",
 		MAME_DIR .. "src/devices/cpu/tms320c82/mp_ops.cpp",
+		MAME_DIR .. "src/devices/cpu/tms320c82/pp_ops.cpp",
 	}
 end
 
