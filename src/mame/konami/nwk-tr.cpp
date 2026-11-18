@@ -366,7 +366,11 @@ uint32_t nwktr_state::screen_update(screen_device &screen, bitmap_rgb32 &bitmap,
 		copybitmap(m_below, bitmap, 0, 0, 0, 0, cliprect);
 	}
 	// K001604 on slave board doesn't seem to output anything. Bug or intended?
-	m_widescreen->draw_2d(bitmap, cliprect, m_front_2d, [&] (bitmap_rgb32 &dest) { m_k001604[0]->draw_front_layer(screen, dest, cliprect); });
+	// (m_widescreen only exists with anamorphic -widescreen)
+	if (m_widescreen)
+		m_widescreen->draw_2d(bitmap, cliprect, m_front_2d, [&] (bitmap_rgb32 &dest) { m_k001604[0]->draw_front_layer(screen, dest, cliprect); });
+	else
+		m_k001604[0]->draw_front_layer(screen, bitmap, cliprect);
 	if (hires)
 		hires->magnify_changes(m_below, bitmap, cliprect);
 
