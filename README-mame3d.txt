@@ -173,6 +173,9 @@ Since mame3d 0.289-2362-g0777442
 - Racing Jam 1 and 2, Thrill Drive (Konami NWK-TR): crashed at start-up
   without -widescreen in g0777442. Fixed.
 - List of the games tested with GPU acceleration (see High resolution 3D).
+- FFBPlugin folder: FFB Arcade Plugin 2.1.0.26 (commit 257d710), the one
+  on the cabinets: Speed Up and the other constant-force games no longer
+  restart their force every 0.3 s (cut-offs).
 
 Since mame3d 0.289-2336-g705501b
 - Thrill Drive 1 and 2: 16:9 with -widescreen (see Display).
@@ -361,9 +364,9 @@ Known issues
   FFBPlugin folder, which holds a fixed version.
 
 FFBPlugin folder (FFB Arcade Plugin, njz3 fork)
-Same content as FFBArcadePlugin-2.1.0.6-g09c2657-njz3-windows-x64.zip
-(github.com/njz3/FFBArcadePlugin, branch dev/mame-racer, commit 09c2657).
-- dinput8.dll: FFB Arcade Plugin 2.1.0.6 (njz3 fork), Release x64:
+Same content as FFBArcadePlugin-2.1.0.26-g257d710-njz3-windows-x64.7z
+(github.com/njz3/FFBArcadePlugin, branch dev/mame-racer, commit 257d710).
+- dinput8.dll: FFB Arcade Plugin 2.1.0.26 (njz3 fork), Release x64:
     - Endprodukt's MAME racing games ported onto the refactored plugin;
     - fix of the nameFFB pointer to a freed string (crash when quitting
       MAME, memory leak);
@@ -376,7 +379,7 @@ Same content as FFBArcadePlugin-2.1.0.6-g09c2657-njz3-windows-x64.zip
     - finds the wheel or vJoy again when its DeviceGUID was saved with
       another SDL2 version (SDL 2.32.8 puts a CRC in bytes 2-3 of the
       GUID, so older ini files no longer matched);
-    - its version (2.1.0.6-g09c2657) is in the file properties and on the
+    - its version (2.1.0.26-g257d710) is in the file properties and on the
       first line of FFBlog.txt, with the SDL version.
   Only depends on SDL2.dll and Windows DLLs.
 - FFBPluginGUI.exe + MetroFramework*.dll: the configuration program. It
