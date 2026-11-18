@@ -61,6 +61,49 @@ High resolution 3D
 - Driver's Eyes (three screens): the three boards are linked directly, all
   three screens work.
 
+Games tested with GPU acceleration (Vulkan)
+These games run with -hires3d 2 to 4 on the graphics card: started, demo
+then a game with coin, Start and accelerator, no error, no black frame, the
+picture compared with native. Last run: 2026-11-18, -hires3d 2, on an
+NVIDIA GeForce RTX 3050 Laptop GPU (the earlier runs also went from x1 to x4,
+with and without -widescreen).
+    Sega Model 1           : vr (Virtua Racing), vformula (Virtua Formula),
+                             wingwar (Wing War), netmerc (NetMerc)
+    Namco System 21        : winrun (Winning Run), driveyes (Driver's Eyes)
+    Namco System 22 / S22  : ridgerac (Ridge Racer), ridgera2 (Ridge Racer
+                             2), raverace (Rave Racer), acedrive (Ace
+                             Driver), victlap (Ace Driver: Victory Lap),
+                             cybrcycc (Cyber Cycles), dirtdash (Dirt Dash),
+                             alpinerd (Alpine Racer)
+    Konami K001005         : gticlub (GTI Club), midnrun (Midnight Run),
+                             windheat (Winding Heat)
+    3dfx Voodoo 1/2        : sfrush (San Francisco Rush), calspeed
+                             (California Speed), roadburn (Road Burners),
+                             thrilld (Thrill Drive), racingj (Racing Jam),
+                             racingj2 (Racing Jam: Chapter 2), hangplt (Hang
+                             Pilot)
+    3dfx Banshee/Voodoo 3  : sf2049 (San Francisco Rush 2049), sf2049se
+                             (Rush 2049 Special Edition), cartfury (CART
+                             Fury), thrild2 (Thrill Drive 2), xtrial (Xtrial
+                             Racing), gticlub2 (GTI Club 2)
+    Midway V-Unit          : crusnusa (Cruis'n USA), crusnwld (Cruis'n
+                             World), offroadc (Off Road Challenge)
+    Midway Zeus 2          : crusnexo (Cruis'n Exotica)
+    Taito JC               : sidebs (Side by Side), sidebs2 (Side by Side 2)
+    Gaelco 3D              : speedup (Speed Up), surfplnt (Surf Planet),
+                             radikalb (Radikal Bikers)
+    SNK Hyper Neo Geo 64   : roadedge (Roads Edge), xrally (Xtreme Rally)
+    Namco System 23        : raceon (Race On!), 500gp (500 GP), motoxgo
+                             (Motocross Go!)
+    PlayStation graphics   : pocketrc (Pocket Racer), kartduel (Kart Duel)
+- Not working: dangcurv (Dangerous Curves, Taito JC): MAME shows no 3D.
+- Not tried (no ROM here): Jet Wave, San Francisco Rush: The Rock,
+  Hyperdrive, Vapor TRX.
+- Thrill Drive, Racing Jam 1 and 2 ask for their memory to be initialised
+  on the first start (Test button), as without -hires3d.
+- Xtrial Racing, Road Burners: the race can start a little differently than
+  in native (position, ranking); the picture is right.
+
 Display
 - Option -aspect_ratio (same values as the cabinets' other emulators): the
   frame the screen is shown in, centred with black bars.
@@ -122,6 +165,14 @@ Display
   leaves black on the sides. With -widescreen_bg and -widescreen_2d stretch,
   a background that does not extend past the 4:3 screen (HNG64 menus) is
   stretched with the rest.
+
+Since mame3d 0.289-2362-g0777442
+- Merge of upstream MAME from 2026-11-18 (172 commits). The Fujitsu F2MC-16
+  interrupt fix of upstream replaces ours (Namco ASCA-3A I/O board,
+  Motocross Go!).
+- Racing Jam 1 and 2, Thrill Drive (Konami NWK-TR): crashed at start-up
+  without -widescreen in g0777442. Fixed.
+- List of the games tested with GPU acceleration (see High resolution 3D).
 
 Since mame3d 0.289-2336-g705501b
 - Thrill Drive 1 and 2: 16:9 with -widescreen (see Display).
@@ -253,7 +304,7 @@ Since MAME njz3 FFB edition 0.289-1946-g8e81ca4
 - Capcom link (CPS2): the USART buffer is no longer emptied by the network
   thread.
 
-Based on upstream MAME from 2026-11-11, with:
+Based on upstream MAME from 2026-11-18, with:
 
 - Option -write_directory / -writedir <folder> (or the write_directory key
   in mame.ini): everything MAME writes (mame.ini, ui.ini, plugin.ini, game

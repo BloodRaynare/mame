@@ -1354,3 +1354,23 @@ ones). Cart Fury, Side by Side and Hang Pilot remain.
   are narrowed, but almost all the 2D (menus, speed) is in priority 14,
   under the 3D, with the scenery: it stays stretched, no visible change.
   Without `-widescreen`, pixel-identical.
+
+### Continued, 2026-11-18: upstream merge, GPU bench, NWK-TR crash
+
+- **Merge** of upstream MAME (172 commits, afacf58514f). Only conflict:
+  f2mc16.cpp, where hap's interrupt fix (71e966694cc) supersedes ours
+  (1272353226d); upstream's file is taken as is. Upstream also loads the
+  System 22 point ROM as a 32-bit region (`m_pointrom` is now a region
+  pointer); our code only goes through `point_read`. Built in one go
+  (mame0289-2535-gafacf58514f).
+- **Bench** on the merged build, native then Vulkan ×2, 46 games (the 40 of
+  the matrix plus ridgera2, victlap, cybrcycc, alpinerd, wingwar, netmerc,
+  never tried before; wingwar and netmerc with `hd44780_a00.zip` copied as
+  `hd44780.zip` in an extra rompath): 43 with exit code 0, no black frame.
+  sfrush: the known last-capture spike. xtrial: race starts differently
+  than native (known).
+- **racingj, racingj2, thrilld crashed on the first frame** (native too):
+  nwk-tr.cpp drew the front 2D through `m_widescreen`, which only exists
+  with anamorphic `-widescreen` (26ee852cdcb, in release g0777442). Fixed in
+  ba1757c914a; native, ×2 and ×2 `-widescreen` run with exit code 0.
+- README-mame3d.txt: list of the games tested with GPU acceleration.
