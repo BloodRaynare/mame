@@ -1,139 +1,141 @@
-# mame3d — suivi d'avancement
+# mame3d — progress log
 
-Branche `dev/mame3d` (partie de `dev/ffdedition`). But : rendre la 3D des jeux de
-course 1990-2010 à n'importe quelle résolution, d'abord en logiciel puis sur la
-carte graphique (Vulkan), en gardant l'émulation MAME de tout le reste : CPU,
-DSP, géométrie, son, I/O, link et 2D.
+Branch `dev/mame3d` (part of `dev/ffbedition`). Goal: render the 3D of
+1990-2010 racing games at any resolution, first in software, then on the
+graphics card (Vulkan), while keeping MAME's emulation of everything else: CPU,
+DSP, geometry, sound, I/O, link and 2D.
 
-Le rendu Vulkan n'est pas un bonus : le but est aussi de faire travailler la
-carte graphique pour soulager le CPU de la machine qui fait tourner MAME. Pour
-chaque puce, on traduit donc ses commandes 3D (triangles, états de mélange,
-profondeur, textures) en appels Vulkan. Le rendu logiciel HD sert de référence
-pour vérifier l'image, et de repli sans Vulkan ou pour les cas non traduits.
+The Vulkan renderer is not a bonus: the goal is also to put the graphics card
+to work and relieve the CPU of the machine that runs MAME. So for each chip we
+translate its 3D commands (triangles, blend states, depth, textures) into
+Vulkan calls. The HD software renderer is the reference for checking the
+image, and the fallback without Vulkan or for untranslated cases.
 
-## Périmètre
+## Scope
 
-Exclus, car déjà rendus nativement en 3D par d'autres émulateurs :
+Excluded, because other emulators already render them natively in 3D:
 
-- Sega Model 2 : sm2-emu
-- Sega Model 3 : Supermodel
-- Naomi, Naomi 2, Atomiswave (PowerVR2) : Flycast
-- Hikaru : hikaruloader
+- Sega Model 2: sm2-emu
+- Sega Model 3: Supermodel
+- Naomi, Naomi 2, Atomiswave (PowerVR2): Flycast
+- Hikaru: hikaruloader
 
-Sega Model 1 (vr, vformula, ...) est de nouveau suivi (décision du propriétaire,
-2026-11-10) : il a son rendu Vulkan en haute résolution ; restent le partage
-avec bgfx et le 16:9, MAME y faisant la projection 3D.
+Sega Model 1 (vr, vformula, ...) is tracked again (owner's decision,
+2026-11-10): it has its high-resolution Vulkan renderer; sharing with bgfx and
+16:9 remain, MAME doing the 3D projection there.
 
-Matériel visé, dans l'ordre :
+Target hardware, in order:
 
-| # | Matériel | Jeux | Rendu logiciel HD | Rendu Vulkan |
+| # | Hardware | Games | HD software renderer | Vulkan renderer |
 |---|---|---|---|---|
-| 1 | Namco System 22 / Super 22 | ridgerac, ridgera2, raverace, acedrive, victlap, cybrcycc, dirtdash, alpinerd | OK (ridgerac, dirtdash ×2) | OK (5 jeux ×2) ; plus rapide que le natif |
-| 2 | Konami K001005 | gticlub, midnrun, windheat, jetwave | OK (gticlub, midnrun ×2) | OK (midnrun, gticlub) ; proche du natif |
-| 3 | 3dfx Voodoo 1/2 | sfrush, sfrushrk, calspeed, hyprdriv, vaportrx, roadburn, thrilld, racingj, racingj2 | OK (sfrush ×2 ×4, racingj ×2, roadburn ×2) ; coûteux en CPU | OK (même image que le logiciel) ; au niveau du natif en ×2 sur roadburn |
-| 3b | 3dfx Banshee / Voodoo 3 | sf2049, sf2049se, cartfury (et viper, nbashowt… non essayés) | OK (sf2049, cartfury ×2) | OK (même image que le logiciel ; ×4 sf2049 130 s en 65 s) |
-| 4 | Midway V-Unit | crusnusa, crusnwld, offroadc | OK (3 jeux ×2 en démo 3D ; sommets entiers : bords natifs, textures HD) | OK (même image que le logiciel) ; ×4 60 s contre 81 s en logiciel |
-| 5 | Midway Zeus 2 | crusnexo | OK (crusnexo ×2, ×4, mode démo) | OK, vrais triangles, plus de raster CPU ; temps CPU ×2 52 s contre 92 s en natif |
-| 6 | Namco System 21 | winrun, driveyes | OK (winrun, driveyes ×2) | OK, vrais quads, plus de raster CPU ; winrun, temps CPU ×4 14,5 s contre 23 s en natif |
-| 7 | Taito JC (TC0780FPA) | sidebs, sidebs2, dangcurv | OK (sidebs, sidebs2 ×2) | OK, vrais triangles et quads, plus de raster CPU ; temps CPU ×4 84,5 s contre 86 s en natif |
-| 8 | Gaelco 3D | speedup, surfplnt, radikalb | OK (speedup, radikalb ×2) | OK, vrais triangles, plus de raster CPU ; temps CPU ×2 18 s contre 52 s en natif |
-| 9 | SNK HNG64 | roadedge, xrally | OK (roadedge, xrally ×2) | OK, vrais triangles, plus de raster CPU, 2D au-dessus mélangée sur le GPU ; temps CPU ×4 75 s contre 88 s en natif |
-| — | Namco System 23 | motoxgo, raceon, finfurl | quand l'émulation de base marchera | |
+| 1 | Namco System 22 / Super 22 | ridgerac, ridgera2, raverace, acedrive, victlap, cybrcycc, dirtdash, alpinerd | OK (ridgerac, dirtdash ×2) | OK (5 games ×2); faster than native |
+| 2 | Konami K001005 | gticlub, midnrun, windheat, jetwave | OK (gticlub, midnrun ×2) | OK (midnrun, gticlub); close to native |
+| 3 | 3dfx Voodoo 1/2 | sfrush, sfrushrk, calspeed, hyprdriv, vaportrx, roadburn, thrilld, racingj, racingj2 | OK (sfrush ×2 ×4, racingj ×2, roadburn ×2); CPU-heavy | OK (same image as software); on par with native at ×2 on roadburn |
+| 3b | 3dfx Banshee / Voodoo 3 | sf2049, sf2049se, cartfury (and viper, nbashowt… not tried) | OK (sf2049, cartfury ×2) | OK (same image as software; ×4 sf2049 130 s in 65 s) |
+| 4 | Midway V-Unit | crusnusa, crusnwld, offroadc | OK (3 games ×2 in 3D demo; integer vertices: native edges, HD textures) | OK (same image as software); ×4 60 s vs 81 s in software |
+| 5 | Midway Zeus 2 | crusnexo | OK (crusnexo ×2, ×4, demo mode) | OK, real triangles, no more CPU raster; CPU time ×2 52 s vs 92 s native |
+| 6 | Namco System 21 | winrun, driveyes | OK (winrun, driveyes ×2) | OK, real quads, no more CPU raster; winrun, CPU time ×4 14.5 s vs 23 s native |
+| 7 | Taito JC (TC0780FPA) | sidebs, sidebs2, dangcurv | OK (sidebs, sidebs2 ×2) | OK, real triangles and quads, no more CPU raster; CPU time ×4 84.5 s vs 86 s native |
+| 8 | Gaelco 3D | speedup, surfplnt, radikalb | OK (speedup, radikalb ×2) | OK, real triangles, no more CPU raster; CPU time ×2 18 s vs 52 s native |
+| 9 | SNK HNG64 | roadedge, xrally | OK (roadedge, xrally ×2) | OK, real triangles, no more CPU raster, 2D on top blended on the GPU; CPU time ×4 75 s vs 88 s native |
+| — | Namco System 23 | motoxgo, raceon, finfurl | when the base emulation works | |
 
 ## Architecture
 
-1. **Sortie haute résolution** : `src/emu/hires3d.{h,cpp}`, avec l'option
-   `-hires3d N` (1 à 16, 1 = natif).
-   - Le driver dessine l'image dans `frame_bitmap()` (taille native × N), puis
-     appelle `frame_done()`.
-   - `screen_device::video_output_update()` donne alors cette image au moteur
-     d'affichage à la place de l'image native.
-   - L'émulation, la synchronisation et les mises à jour partielles ne changent
-     pas.
-   - `screen.h` n'est pas modifié, ce qui évite une recompilation complète.
-2. **2D** : chaque driver dessine ses tilemaps et sprites à la résolution
-   native. `upscale()` les agrandit au plus proche dans l'image HD, en sautant
-   les pixels transparents (alpha 0) pour les couches au-dessus de la 3D.
-3. **3D logicielle HD** : le rasteriseur de chaque puce dessine directement dans
-   l'image HD, avec des sommets mis à l'échelle à partir de coordonnées
-   flottantes conservées avant l'arrondi au pixel natif.
-4. **3D Vulkan** : `src/emu/vk3d.{h,cpp}`, avec l'option
-   `-hires3d_renderer auto|vulkan|software` (défaut : auto).
-   - Rendu hors écran au format de pixel de `bitmap_rgb32` (B8G8R8A8), avec
-     tampon de profondeur D32. Le driver enregistre des lots de triangles en
-     pixels HD, puis `end_frame()` rend l'image, la relit dans l'image HD et
-     suit le même chemin que le rendu logiciel. Ça marche avec tous les moteurs
-     d'affichage, les captures et l'enregistrement vidéo.
-   - `vulkan-1.dll` est chargée au lancement par `osd::dynamic_module`. Sans
-     Vulkan, `hires3d_output::vulkan()` renvoie nullptr et le driver dessine en
-     logiciel. Un échec en cours de partie fait aussi revenir au logiciel.
-   - Pipelines fournis : `PIPE_COLOR`, `PIPE_COLOR_STIPPLE` (damier, taille de
-     case dans `p`), `PIPE_TEXTURE_KEY` (texture, alpha 0 transparent). Un
-     driver peut ajouter les siens avec `add_pipeline()` (SPIR-V, mélange,
-     profondeur).
-   - Les en-têtes Vulkan viennent de `3rdparty/bgfx/3rdparty/khronos/vulkan-local`.
-   - Shaders : `src/emu/vk3d_shaders/*.vert|frag`, compilés en SPIR-V dans des
-     fichiers `.spv.inc`, qui sont versionnés :
+1. **High-resolution output**: `src/emu/hires3d.{h,cpp}`, with the option
+   `-hires3d N` (1 to 16, 1 = native).
+   - The driver draws the image into `frame_bitmap()` (native size × N), then
+     calls `frame_done()`.
+   - `screen_device::video_output_update()` then hands this image to the
+     display backend instead of the native image.
+   - Emulation, synchronisation and partial updates do not change.
+   - `screen.h` is not modified, which avoids a full rebuild.
+2. **2D**: each driver draws its tilemaps and sprites at native resolution.
+   `upscale()` enlarges them (nearest neighbour) into the HD image, skipping
+   transparent pixels (alpha 0) for layers above the 3D.
+3. **HD software 3D**: each chip's rasterizer draws directly into the HD image,
+   with vertices scaled from floating-point coordinates kept before rounding to
+   the native pixel.
+4. **Vulkan 3D**: `src/emu/vk3d.{h,cpp}`, with the option
+   `-hires3d_renderer auto|vulkan|software` (default: auto).
+   - Offscreen rendering in the `bitmap_rgb32` pixel format (B8G8R8A8), with a
+     D32 depth buffer. The driver records batches of triangles in HD pixels,
+     then `end_frame()` renders the image, reads it back into the HD image and
+     follows the same path as the software renderer. This works with all
+     display backends, snapshots and video recording.
+   - `vulkan-1.dll` is loaded at startup by `osd::dynamic_module`. Without
+     Vulkan, `hires3d_output::vulkan()` returns nullptr and the driver draws in
+     software. A failure during a game also falls back to software.
+   - Pipelines provided: `PIPE_COLOR`, `PIPE_COLOR_STIPPLE` (checkerboard,
+     cell size in `p`), `PIPE_TEXTURE_KEY` (texture, alpha 0 transparent). A
+     driver can add its own with `add_pipeline()` (SPIR-V, blending, depth).
+   - The Vulkan headers come from
+     `3rdparty/bgfx/3rdparty/khronos/vulkan-local`.
+   - Shaders: `src/emu/vk3d_shaders/*.vert|frag`, compiled to SPIR-V into
+     `.spv.inc` files, which are versioned:
 
      ```
      glslc --target-env=vulkan1.0 -O -mfmt=num -o X.spv.inc X
      ```
 
      (`C:\VulkanSDK\1.4.363.0\Bin\glslc.exe`)
-   - Avec bgfx sur Direct3D 11, l'image n'est plus relue : voir le point 7.
-5. **Contexte Vulkan commun** : `src/emu/vk3d_context.{h,cpp}` charge Vulkan,
-   crée le périphérique (avec les options demandées que le GPU possède) et
-   fournit les aides tampons, images et shaders. `vk3d_renderer` et les rendus
-   propres à une puce en héritent.
-6. **Rendus GPU propres à une puce** : quand le modèle « lots de triangles »
-   de `vk3d_renderer` ne suffit pas, la puce a son propre rendu qui traduit
-   ses commandes. Premier cas : `src/devices/video/voodoo_vk.{h,cpp}` (voir le
-   journal Voodoo). Ses shaders sont dans `src/devices/video/voodoo_vk_shaders`
-   et se compilent avec `-I .` pour `layout.h`, partagé avec le C++ :
+   - With bgfx on Direct3D 11, the image is no longer read back: see item 7.
+5. **Common Vulkan context**: `src/emu/vk3d_context.{h,cpp}` loads Vulkan,
+   creates the device (with the requested features the GPU has) and provides
+   the buffer, image and shader helpers. `vk3d_renderer` and the chip-specific
+   renderers inherit from it.
+6. **Chip-specific GPU renderers**: when the "triangle batches" model of
+   `vk3d_renderer` is not enough, the chip has its own renderer that
+   translates its commands. First case: `src/devices/video/voodoo_vk.{h,cpp}`
+   (see the Voodoo log). Its shaders are in `src/devices/video/voodoo_vk_shaders`
+   and are compiled with `-I .` for `layout.h`, shared with the C++:
 
    ```
    glslc --target-env=vulkan1.0 -O -mfmt=num -I . -o X.spv.inc X
    ```
 
-7. **Image partagée avec bgfx** (`-bgfx_hires3d_share`, actif par défaut) :
-   l'image finie reste sur le GPU.
-   - `src/osd/modules/render/bgfx/sharedtexture.{h,cpp}` crée des textures
-     Direct3D 11 partagées par handle NT et les substitue aux textures bgfx
-     (`overrideInternal`), comme texture d'écran des chaînes ou du quad simple.
-   - `src/emu/vk3d_share.{h,cpp}` les importe dans le périphérique Vulkan de
-     chaque puce (`VK_KHR_external_memory_win32`, Vulkan 1.1, même adaptateur
-     vérifié par le LUID) et y copie l'image finie au lieu de la relire.
-   - `hires3d_output::use_frame()` reçoit la texture ; bgfx la dessine, et la
-     relecture ne se fait plus que pour les captures et l'enregistrement
-     (`read_gpu_textures()` dans `video_manager::create_snapshot_bitmap`).
-   - bgfx tourne alors sur le thread de l'émulation (`bgfx::renderFrame()`
-     avant `bgfx::init()`) : son périphérique D3D11 est créé mono-thread, et
-     les textures sont créées et suivies depuis l'émulation. Avec le thread de
-     rendu de bgfx, le pilote NVIDIA plantait ou bloquait.
-   - Synchronisation par le CPU : la puce attend son lot avant que bgfx dessine
-     (rappel `ready`), et ne réécrit une texture qu'une fois les dessins qui la
-     lisent finis (anneau de requêtes D3D11 ; sinon l'image est relue).
-   - Branché sur System 22, System 21, Taito JC, HNG64, Gaelco 3D, K001005 et
-     Voodoo (1/2, Banshee, Voodoo 3), V-Unit et Zeus 2 (2026-11-09). Pas
-     encore : Model 1.
-8. **Options d'affichage**, comme dans les autres émulateurs des bornes
-   (`render.cpp`, `place_view()`) :
+7. **Image shared with bgfx** (`-bgfx_hires3d_share`, on by default): the
+   finished image stays on the GPU.
+   - `src/osd/modules/render/bgfx/sharedtexture.{h,cpp}` creates Direct3D 11
+     textures shared by NT handle and substitutes them for the bgfx textures
+     (`overrideInternal`), as the screen texture of the chains or of the
+     simple quad.
+   - `src/emu/vk3d_share.{h,cpp}` imports them into each chip's Vulkan device
+     (`VK_KHR_external_memory_win32`, Vulkan 1.1, same adapter checked by the
+     LUID) and copies the finished image into them instead of reading it back.
+   - `hires3d_output::use_frame()` receives the texture; bgfx draws it, and
+     read-back is now only done for snapshots and recording
+     (`read_gpu_textures()` in `video_manager::create_snapshot_bitmap`).
+   - bgfx then runs on the emulation thread (`bgfx::renderFrame()` before
+     `bgfx::init()`): its D3D11 device is created single-threaded, and the
+     textures are created and tracked from the emulation. With the bgfx render
+     thread, the NVIDIA driver crashed or hung.
+   - Synchronisation by the CPU: the chip waits for its batch before bgfx
+     draws (`ready` callback), and only rewrites a texture once the draws that
+     read it are finished (ring of D3D11 queries; otherwise the image is read
+     back).
+   - Wired up on System 22, System 21, Taito JC, HNG64, Gaelco 3D, K001005 and
+     Voodoo (1/2, Banshee, Voodoo 3), V-Unit and Zeus 2 (2026-11-09). Not yet:
+     Model 1.
+8. **Display options**, as in the other emulators on the cabinets
+   (`render.cpp`, `place_view()`):
    - `-aspect_ratio original|4:3|16:9|4:3_stretch|16:9_stretch|4:3_crop|16:9_crop`
-     (`4:3_letterbox` = `4:3`) : le cadre où l'écran est montré, centré avec des
-     bandes noires ; l'écran y garde sa forme, le remplit, ou le couvre en
-     étant coupé. `-crop_position -100..100` choisit la partie gardée.
-   - `-widescreen` : image 16:9 pour les puces dont MAME fait la projection
-     3D (System 22, HNG64, Zeus 2), sur le rendu Vulkan seulement, même en
-     `-hires3d 1`. `hires3d_output` ajoute `pad()` colonnes HD de chaque côté
-     de l'écran natif, et l'écran est montré en 16:9 (`view_widening()`).
-   - `-widescreen_2d 4:3|stretch` : les couches 2D au milieu à leur forme, ou
-     étirées sur toute la largeur.
-   - `-widescreen_bg` : les tilemaps sous la 3D dessinées aussi sur les côtés
-     (HNG64 ; System 22 n'en a pas, son fond est la couleur de fond ou la 3D).
+     (`4:3_letterbox` = `4:3`): the frame the screen is shown in, centred with
+     black bars; the screen keeps its shape in it, fills it, or covers it and
+     is cropped. `-crop_position -100..100` picks the part that is kept.
+   - `-widescreen`: 16:9 image for the chips where MAME does the 3D projection
+     (System 22, HNG64, Zeus 2), on the Vulkan renderer only, even at
+     `-hires3d 1`. `hires3d_output` adds `pad()` HD columns on each side of the
+     native screen, and the screen is shown in 16:9 (`view_widening()`).
+   - `-widescreen_2d 4:3|stretch`: the 2D layers in the middle at their shape,
+     or stretched over the full width.
+   - `-widescreen_bg`: the tilemaps below the 3D also drawn on the sides
+     (HNG64; System 22 has none, its background is the background colour or
+     the 3D).
 
-## Compilation
+## Build
 
-- Build réduit pour itérer vite (dossier séparé `build3d`, exe `mame3d.exe`) :
+- Reduced build to iterate fast (separate `build3d` folder, exe `mame3d.exe`):
 
   ```
   make vs2022 BUILDDIR=build3d SUBTARGET=3d SOURCES=src/mame/sega/model1.cpp,...  PTR64=1 NOWERROR=1 PYTHON_EXECUTABLE=<python Windows>
@@ -142,1242 +144,1213 @@ Matériel visé, dans l'ordre :
 
   `SOURCES` = model1, namcos21, namcos21_de, namcos22, namcos23, gticlub,
   zr107, nwk-tr, seattle, vegas, midvunit, midzeus, taitojc, gaelco3d, hng64.
-- Le build complet (`build\...\mame.sln`) reste celui des releases.
+- The full build (`build\...\mame.sln`) remains the one for releases.
 
 ## ROMs
 
-On copie seulement ce qui est nécessaire, au fur et à mesure, depuis
-`\\192.168.1.100\toshiba2t\MAME ROMs (merged)` (et `MAME CHDs (merged)`) vers
-`C:\Users\benja\Desktop\Perso\Racecab\roms`, sur ce PC uniquement, jamais sur
-les bornes. Le `vr.zip` déjà présent contient vformula et epr-15111.12 : ne pas
-l'écraser.
+Copy only what is needed, as we go, from
+`\\192.168.1.100\toshiba2t\MAME ROMs (merged)` (and `MAME CHDs (merged)`) to
+`C:\Users\benja\Desktop\Perso\Racecab\roms`, on this PC only, never on the
+cabinets. The `vr.zip` already there contains vformula and epr-15111.12: do
+not overwrite it.
 
-## Journal
+## Log
 
-- 2026-10-31 : branche `dev/mame3d` créée. Inventaire des puces 3D fait. Ajout
-  de l'infrastructure `hires3d` et de l'option `-hires3d`. Model 1 :
-  - rendu logiciel HD : positions projetées gardées en flottants, découpage du
-    viewport mis à l'échelle, fils de fer d'un pixel natif d'épaisseur, HUD
-    agrandi et masque HUD calculé sur l'image HD ;
-  - rendu Vulkan : fond et HUD en textures, quadrilatères en paires de
-    triangles dans l'ordre trié, damier en shader, passe « au-dessus du HUD »
-    en logiciel sur l'image relue.
-- 2026-10-31 : rendu logiciel HD écrit (compilé, pas encore testé) pour trois
-  matériels.
-  - **Namco System 22 / Super 22** : sommets et découpage mis à l'échelle pour
-    les polygones et les sprites. Ils sont dessinés avec leur propre carte de
-    priorité HD. Le texte reste natif : ses marques de priorité sont copiées
-    dans la carte HD, puis le mélange (ombre, spot, fondu, gamma) se fait par
-    pixel HD.
-  - **Konami K001005** : tampons du K001005 agrandis × N (option lue au
-    démarrage du device). `draw(bitmap, clip, scale)` sous-échantillonne pour
-    l'écran natif ou copie 1:1 en HD. Côté drivers (GTI Club, Midnight Run,
-    Winding Heat, Jet Wave), la tilemap de fond est agrandie, la 3D copiée en
-    HD, la tilemap de devant agrandie avec transparence.
-  - **Midway V-Unit** : la mémoire vidéo native est gardée pour l'émulation.
-    Une copie HD des deux pages reçoit les mêmes quads (centres de pixels natifs
-    → centres de blocs HD) et les écritures CPU agrandies en blocs. L'affichage
-    HD convertit cette copie par la palette. Les sommets fournis par le jeu
-    sont entiers : les bords restent ceux du natif, mais les textures et le
-    tramage sont calculés par pixel HD.
-- ROMs copiées : ridgerac, raverace, acedrive, dirtdash, alpinerd, namcoc71,
+- 2026-10-31: branch `dev/mame3d` created. Inventory of 3D chips done. Added
+  the `hires3d` infrastructure and the `-hires3d` option. Model 1:
+  - HD software renderer: projected positions kept as floats, viewport
+    clipping scaled, wireframes one native pixel thick, HUD enlarged and HUD
+    mask computed on the HD image;
+  - Vulkan renderer: background and HUD as textures, quads as triangle pairs
+    in sorted order, checkerboard in a shader, "above the HUD" pass in
+    software on the read-back image.
+- 2026-10-31: HD software renderer written (compiled, not yet tested) for
+  three hardware platforms.
+  - **Namco System 22 / Super 22**: vertices and clipping scaled for polygons
+    and sprites. They are drawn with their own HD priority map. The text stays
+    native: its priority marks are copied into the HD map, then blending
+    (shadow, spot, fade, gamma) is done per HD pixel.
+  - **Konami K001005**: K001005 buffers enlarged × N (option read at device
+    startup). `draw(bitmap, clip, scale)` downsamples for the native screen or
+    copies 1:1 in HD. On the driver side (GTI Club, Midnight Run, Winding
+    Heat, Jet Wave), the background tilemap is enlarged, the 3D copied in HD,
+    the front tilemap enlarged with transparency.
+  - **Midway V-Unit**: the native video memory is kept for the emulation. An
+    HD copy of the two pages receives the same quads (native pixel centres →
+    HD block centres) and the CPU writes enlarged into blocks. The HD display
+    converts this copy through the palette. The vertices supplied by the game
+    are integers: the edges stay native, but textures and dithering are
+    computed per HD pixel.
+- ROMs copied: ridgerac, raverace, acedrive, dirtdash, alpinerd, namcoc71,
   namcoc74, gticlub, midnrun, windheat, crusnusa, crusnwld, tms320c31.
-- 2026-10-31 : premiers tests avec `3d.exe` (build `build3d`).
-  - **Model 1 (vr)** : ×4 logiciel et ×4 Vulkan donnent la même image en
+- 2026-10-31: first tests with `3d.exe` (build `build3d`).
+  - **Model 1 (vr)**: ×4 software and ×4 Vulkan give the same image at
     1984×1536.
-    - Défaut corrigé : en Vulkan, les petits quads lointains réduits à deux
-      points en natif étaient dessinés comme des fils de fer. Le test se fait
-      maintenant sur les positions HD, comme en logiciel.
-    - Le masque HUD (« au-dessus du HUD ») n'est calculé que si la liste
-      d'affichage contient des objets 0x41.
-    - `upscale()` agrandit une ligne puis la recopie.
-    - Temps pour 25 s émulées (`-nothrottle`, RTX 3050 portable) : natif
-      environ 19,5 s, logiciel ×4 25,5 s. En Vulkan ×4, l'attente du GPU et le
-      transfert prennent 6,3 ms par image, la copie 1,9 ms : il faut rendre le
-      GPU asynchrone, ou passer l'image à l'affichage sans relecture.
-  - **System 22** : ridgerac et dirtdash corrects en ×2.
-  - **K001005** : gticlub et midnrun corrects en ×2.
-  - **V-Unit** : il y avait deux défauts.
-    - Le jeu fait ses fondus par la palette seule. Le chemin HD convertit donc
-      la page à chaque mise à jour et signale toujours un changement.
-    - Sur un écran indexé, `palette.pens()` renvoie des numéros de couleur, pas
-      des couleurs : il faut lire `palette()->entry_list_adjusted()`. Ce point
-      vaudra aussi pour System 21, Taito JC et HNG64.
-    - Cruis'n USA démarre sur la calibration et la NVRAM est vide ; il faudra
-      une NVRAM calibrée pour vérifier la 3D en démo.
-  - Bug sans lien avec mame3d, présent aussi dans le `mame.exe` de
-    `dev/ffdedition` : midnrun et windheat (driver zr107) plantaient à la
-    sortie après plus de 10 s. **Corrigé** par le commit 60f3007783b sur
-    `dev/ffdedition`, fusionné dans `dev/mame3d`.
-    - Cause : sous Windows, le DRC x64 range ses registres flottants UML dans
-      XMM6-XMM15 mais ne les sauvegardait pas au point d'entrée.
-    - MSVC garde une constante dans XMM6 pendant `machine.run()` ; elle
-      revenait corrompue, d'où une chaîne vide invalide dans
-      `set_system_name("")`.
-    - Le bug existe aussi dans MAME upstream.
+    - Bug fixed: in Vulkan, small distant quads reduced to two points in
+      native were drawn as wireframes. The test is now done on the HD
+      positions, as in software.
+    - The HUD mask ("above the HUD") is only computed if the display list
+      contains 0x41 objects.
+    - `upscale()` enlarges one line then copies it.
+    - Time for 25 emulated s (`-nothrottle`, laptop RTX 3050): native about
+      19.5 s, software ×4 25.5 s. In Vulkan ×4, waiting for the GPU and the
+      transfer take 6.3 ms per frame, the copy 1.9 ms: the GPU must be made
+      asynchronous, or the image passed to the display without read-back.
+  - **System 22**: ridgerac and dirtdash correct at ×2.
+  - **K001005**: gticlub and midnrun correct at ×2.
+  - **V-Unit**: there were two bugs.
+    - The game does its fades through the palette only. So the HD path
+      converts the page at each update and always reports a change.
+    - On an indexed screen, `palette.pens()` returns colour numbers, not
+      colours: `palette()->entry_list_adjusted()` must be read. This also
+      applies to System 21, Taito JC and HNG64.
+    - Cruis'n USA starts on the calibration and the NVRAM is empty; a
+      calibrated NVRAM will be needed to check the 3D in demo.
+  - Bug unrelated to mame3d, also present in the `mame.exe` of
+    `dev/ffbedition`: midnrun and windheat (zr107 driver) crashed on exit
+    after more than 10 s. **Fixed** by commit 60f3007783b on `dev/ffbedition`,
+    merged into `dev/mame3d`.
+    - Cause: on Windows, the x64 DRC keeps its UML float registers in
+      XMM6-XMM15 but did not save them at the entry point.
+    - MSVC keeps a constant in XMM6 during `machine.run()`; it came back
+      corrupted, hence an invalid empty string in `set_system_name("")`.
+    - The bug also exists in upstream MAME.
 
-## Prochaines étapes
+## Next steps
 
-Toutes les puces de la liste ont un rendu logiciel HD et un rendu Vulkan
-(2026-11-02). Reste :
+All chips in the list have an HD software renderer and a Vulkan renderer
+(2026-11-02). Remaining:
 
-1. Essayer le partage avec bgfx sur une carte AMD ou Intel. Mesures sur la
-   RTX 3050 du portable, en ×4, fenêtre sans limite de vitesse : crusnusa
-   441 % contre 287 % en relecture, crusnwld 338 contre 245, offroadc 442
-   contre 294, crusnexo 306 contre 223. Le gain est faible ou nul en ×2.
-   Intel UHD de ce PC (2026-11-09, Vulkan et bgfx forcés dessus) : crusnexo,
-   crusnwld, xrally, ridgerac, midnrun, sf2049, winrun, radikalb et sidebs
-   tournent, images identiques à NVIDIA (0,13 % au pire sur sf2049). Plantage
-   rare au démarrage de sfrush corrigé : l'adresse fautive était 184 pixels
-   avant une image relue, l'écart du `xoffs` natif. Si la zone visible change
-   entre la préparation et l'affichage, `update_texture` calculait la zone
-   actuelle ; il prend maintenant celle de l'image. Le cas n'est pas réapparu
-   sur 42 lancements, sans plantage, donc le correctif n'a pas été exercé
-   directement. `frames_freed` copie aussi une image montrée dont la mémoire
-   est libérée. Captures noires isolées de ridgerac et radikalb, pas d'image
-   noire dans les captures du jeu. AMD non testé.
-2. HNG64 : les lignes 2D sont gardées sur le GPU, seules celles qui changent
-   partent (fait, 2026-11-09 : 23 à 33 % des lignes, temps d'envoi divisé par
-   2,4, attente -15 %, images identiques ; pas de gain de vitesse mesurable).
-   Course xrally en ×2, sans affichage : 5,1 ms d'attente par image avant ce
-   changement (relecture 47 %, envois 30 %, dessin 22 %). Le K001005 (midnrun)
-   n'attend que 0,5 ms par image : rien à faire.
-   `-widescreen_bg` avec `-widescreen_2d stretch` : les couches sous la 3D sont
-   étirées quand elles ne dépassent pas de l'écran 4:3 (menus de roadedge et
-   xrally), et restent en place sinon (course).
-   **Correctif MIPS** : sfrush se figeait après 49,5 s (toutes nos
-   versions depuis g8e81ca4). Le commit upstream fde5b471bfc arme le compare
-   sur une écriture de Count ; Compare reste à 0xffffffff, le jeu n'y écrit
-   jamais et IP7 reste levée quand Count boucle. L'armement est retiré
-   (`mips3.cpp`, `mips3drc.cpp`). sfrush continue après 50 s, en démo et avec
-   pièce et accélérateur ; xrally est identique sur 45 s et continue après
-   50 s, roadedge et cartfury aussi ; sf2049 continue (sa démo n'est pas
-   déterministe, même sur l'ancienne version). dev/ffbedition a le même défaut.
-3. Banshee/Voodoo 3 : sf2049se essayé jusqu'en course, correct (2026-11-09).
-   Restent les jeux non-course (Viper, nbashowt) ; les blits 2D entre tampons
-   perdent la HD (aucun blit lisant un tampon sur 100 s de sf2049 et cartfury).
-   Voodoo : le rastériseur natif tourne encore pendant le jeu, relancé par les
-   lectures du CPU (sur 100 s : sfrush fbiPixelsIn ×2151 et tampon ×4122, soit
-   2,4 cœurs ; sf2049 les 5 registres de stats ×528, 1 cœur ; cartfury tampon
-   ×945, 0,4 cœur). Pour l'arrêter : compter les pixels sur le GPU et relire
-   les zones lues. Pas nécessaire pour la vitesse (177 à 376 % en ×2).
-   Zeus 2 : plus de reprise logicielle mesurable (crusnexo).
-   À supporter (demande du propriétaire, 2026-11-10) : thrilld (Hornet, Voodoo)
-   et, sur Viper (Voodoo 3), thrild2 et xtrial. Tous « not working » dans MAME : voir
-   d'abord ce qui les bloque ; ROM pas encore copiées, Viper jamais essayé.
-4. System 23, Taito Type Zero et Konami Cobra, quand leur émulation marchera.
-   Demandé par le propriétaire (2026-11-10) : le GPU PS1 (`psxgpu`), pour les
-   systèmes dérivés de la PlayStation (Namco System 11 : pocketrc, System 12 :
-   kartduel, ...). Sommets entiers : plus de résolution, mais les polygones
-   tremblent toujours.
-5. HNG64 en logiciel aux échelles qui ne sont pas des puissances de 2 (×3,
-   ×5…) : remplacer les masques `taille - 1` des rastériseurs et de
-   `blit_3d` (le chemin GPU est déjà corrigé).
-- 2026-10-31 : **Namco System 21** en logiciel HD.
-  - `namcos21_3d` : tampons × N, sommets (entiers) mis à l'échelle, ce qui
-    affine les arêtes. Une copie native de la profondeur visible reste
-    disponible pour le mélange des sprites de Cyber Sled.
-  - Winning Run : mélange en index à la résolution HD. `bitmap_draw` lit la
-    2D native pour chaque pixel HD, ombres comprises, puis la conversion passe
-    par la palette ajustée (`hires3d_output::indexed_to_frame`).
-  - Driver's Eyes : sprites et mélange en natif, 3D copiée en HD. Seuls les
-    pixels que les sprites de priorité 15 modifient (ombres sur la 3D) sont
-    reportés en blocs.
-  - ROMs copiées : winrun, driveyes, namcoc65, namcoc68.
-- 2026-10-31 : **Taito JC** en logiciel HD : tampons du TC0780FPA × N, sommets
-  (entiers) mis à l'échelle. Mélange en index : objets du fond agrandis, 3D
-  HD, objets du dessus et texte agrandis avec la valeur sentinelle 0xffff
-  comme transparence.
-- 2026-10-31 : **vitesse de Side by Side**, corrigée sur `dev/ffdedition`
-  (efc1acdba1e, ba474f170be) puis fusionnée ici.
-  - Avant : la course de démo tournait à 8-10 images 3D/s.
-  - Durées FPU propres au 68040 dans le cœur 68k : environ 20 images/s.
-  - Horloge du 68040 × 1,5 : 30 images/s stables (une image sur deux).
-  - Idle skip sur la boucle d'attente du 68040, qui scrute le mot d'état du
-    DSP : vitesse non limitée de 102 % à 144 % (sidebs) sur le portable.
-- 2026-10-31 : **Gaelco 3D** en logiciel HD. Le DSP fournit des équations de
-  plan par pixel (u/z, v/z, 1/z) : leurs gradients sont divisés par N, les
-  sommets multipliés par N, le tampon image et le z-buffer sont agrandis × N.
-  Le tampon est rangé tête en bas, il est retourné en copiant vers l'image HD
-  et échantillonné pour l'écran natif.
-- 2026-10-31 : **SNK HNG64** en logiciel HD.
-  - Tampons 3D (index, lumière, bit de mélange) de 512 × N de côté ; sommets
-    et découpage mis à l'échelle.
-  - `blit_3d()` sert pour l'écran natif (échantillonné) et pour l'image HD
-    (étirement vertical et défilement x mis à l'échelle, mélange 50 %).
-  - Couches du fond agrandies. Couches du dessus mélangées en natif ; seuls
-    les pixels qu'elles changent sont reportés en blocs.
-  - Les images sans 3D (écran coupé, transitions) sont publiées agrandies.
-  - `hng64.zip` (BIOS) remplacé par celui du partage, qui ajoute trois PROM
-    de configuration (mêmes CRC pour le reste).
-- 2026-10-31 : **Midway Zeus 2** en logiciel HD.
-  - Copie HD du tampon couleur et profondeur, avec la même structure de lignes
-    (512 ou 1024 pixels selon `m_yScale`) × N.
-  - Le rastériseur écrit par pointeur de début de fenêtre et longueur de
-    ligne, ce qui sert au tampon natif comme au tampon HD.
-  - Polygones dessinés dans les deux, sommets et découpage × N.
-  - Remplissage rapide et `frame_write` recopiés en blocs ; l'affichage HD lit
-    la copie.
-  - Test : Cruis'n Exotica, calibration passée par script (5 appuis sur
-    « Service Mode »), mode démo 3D correct en ×2.
-  - ROMs copiées : crusnexo, tms320c32.
-- 2026-10-31 : **3dfx Voodoo 1/2** en logiciel HD (Banshee et Voodoo 3 non
-  concernés).
-  - Copie HD de toute la mémoire image : une ligne de `rowpixels` pixels
-    natifs devient N lignes de `rowpixels` × N pixels, avec une marge de chaque
-    côté. Les tampons couleur et profondeur y gardent leur adresse.
-  - Longueur de ligne et origine Y passées par polygone (`poly_data`) au lieu
-    de l'état global du rastériseur, pour dessiner chaque triangle une seconde
-    fois dans la copie HD.
-  - Triangle HD : sommets et découpage × N, gradients ÷ N, valeurs de départ
-    recentrées sur le pixel HD quand l'ajustement sous-pixel est actif. Un
-    triangle qui sortirait de la copie HD n'y est pas dessiné.
-  - Remplissages rapides refaits en HD. Écritures LFB (brutes ou par le
-    pipeline) et remplissage par blit du Voodoo 2 recopiés en blocs.
-  - Affichage HD lu dans la copie du tampon avant. `hires()` permet au driver
-    de reporter les pixels que sa 2D change : NWK-TR et Hang Pilot (K001604)
-    le font, avec la nouvelle `hires3d_output::magnify_changes()`.
-  - Tests : sfrush ×2 et ×4, racingj ×2 (texte K001604 par-dessus), roadburn
-    ×2 (Voodoo 2) : images correctes.
-  - Coût CPU élevé : 110 s émulées de racingj en 109 s en natif et 210 s en
-    ×2, 80 s de roadburn en 85 s en natif et 232 s en ×2. D'où la priorité au
-    rendu Vulkan pour cette puce.
-  - ROMs copiées : sfrush (+ CHD), racingj, roadburn (+ CHD).
-- 2026-10-31 : **3dfx Voodoo 1/2 sur Vulkan** (`voodoo_vk`), choisi par
-  défaut quand Vulkan est disponible (`-hires3d_renderer software` garde le
-  rendu logiciel HD).
-  - Le pipeline de pixels du Voodoo tourne dans un fragment shader
-    (`tri.frag`). Il refait les valeurs itérées de chaque pixel avec la même
-    arithmétique entière que le rastériseur logiciel (entiers 64 bits pour W
-    et les textures), et lit les texels directement dans la mémoire des TMU,
-    copiée sur le GPU page par page quand elle change. Il n'y a donc pas de
-    cache de textures. Les tables de texels, palettes et tables de brouillard
-    sont dans un tampon de consultation. Test de profondeur, mélange
-    (« couleur avant brouillard » par double source) et ordre des pixels
-    passent par les étages fixes du GPU.
-  - Une image par tampon couleur et une image de profondeur, × N.
-    Remplissages rapides et blits en effacements, écritures LFB en blocs.
-  - Lots envoyés au GPU sans attendre (tous les 256 triangles), sur un
-    anneau de 3. L'affichage attend la fin du lot courant et relit le tampon
-    avant. La table de couleurs (CLUT) est appliquée en relisant, sauf si
-    elle est linéaire.
-  - Quand Vulkan dessine, le rastériseur natif est sauté, sauf pendant
-    2 secondes après une lecture du tampon d'image par le CPU (sfrush en fait
-    au démarrage, roadburn aussi). Le temps émulé du Voodoo vient alors de
-    l'aire des triangles : la démo peut se décaler d'un peu par rapport au
-    rendu natif, mais l'image d'une scène donnée est la même.
-  - Un Voodoo qui n'est pas affiché ne dessine pas sa copie HD (Racing Jam
-    en a deux).
-  - Les paquets CMDFIFO de type 5 qui écrivent directement dans la mémoire
-    d'image du Voodoo 2 sont recopiés en HD (logiciel et Vulkan).
-  - Contrôle : écart moyen avec le logiciel HD de 0 à 1,6 sur 255, aucun
-    pixel au-delà de 24 (0,01 % sur roadburn). Les différences viennent du
-    tramage 565 que le GPU ne fait pas.
-  - Temps sur le portable (RTX 3050), ×2, très variables d'un essai à
-    l'autre : racingj 110 s émulées en 127 s (logiciel 194 s, natif 109 s),
-    roadburn 30 s en 21,7 s (natif 14 s), sfrush 60 s en 22,7 s (natif 18 s).
-    L'attente du GPU suit le nombre de pixels (3,4 ms par image en ×2,
-    10,6 ms en ×4 sur roadburn) : c'est surtout la relecture de l'image et sa
-    copie dans le bitmap.
-  - Suite : relecture sans attente et image directe (entrée suivante).
-- 2026-10-31 : **Voodoo sur Vulkan, relecture sans attente et image directe.**
-  - MAME affiche à la vblank le tampon devenu avant à l'échange précédent.
-    Juste après chaque échange, la relecture du nouveau tampon avant part donc
-    sur le GPU sans attendre, et elle a une image entière pour arriver. Pas
-    d'image de retard : l'image montrée est la même qu'avant.
-  - Les relectures vont dans un anneau de 3 tampons. L'affichage montre la
-    mémoire relue directement, sans copie, grâce à la nouvelle
-    `hires3d_output::use_frame()`. La relecture montrée n'est pas réécrite
-    avant l'image suivante.
-  - Les drivers qui dessinent leur 2D par-dessus (NWK-TR, Hang Pilot, via
-    `hires()`) gardent une copie, pour ne pas laisser d'ancien texte dans la
-    mémoire relue.
-  - La CLUT du DAC, quand elle n'est pas linéaire (roadburn), est appliquée
-    sur le GPU par une passe plein écran vers une image d'affichage, qui est
-    relue à la place du tampon couleur.
-  - Quand seul le GPU dessine, le tampon natif n'est plus converti pour
-    l'écran natif (il n'est ni dessiné ni montré). Le nombre de pixels estimé
-    pour la chronologie du Voodoo tient compte du rectangle de découpage :
-    sans lui, les grands triangles hors écran faisaient paraître la puce plus
-    occupée et le CPU tournait davantage sur son état.
-  - roadburn, 30 s émulées, meilleur de 3 essais alternés : avant cette étape
-    16,5 s en natif contre 20,3 s en Vulkan ×2 ; après, 19,7 s contre 19,8 s
-    (le portable chauffe, d'où les écarts). Attente GPU : de 3,5 s à 0,02 s,
-    toutes les images montrées sans copie.
-  - Reste : partager l'image avec l'affichage (bgfx) pour supprimer la
-    relecture elle-même.
-- 2026-10-31 : **Namco System 22 / Super 22 sur Vulkan** (`namcos22_vk`), même
-  méthode que le Voodoo.
-  - Le parcours de la scène triée envoie chaque quad (éventail de 3 à 6
-    sommets après découpage en z) et chaque sprite au GPU, avec ce que les
-    fonctions de rendu par ligne lisent de leurs données : palette, mode de
-    couleur, banque de textures, ombrage, brouillard, fondus, alpha,
-    priorité. Le GPU les dessine dans l'ordre du tri, sans tampon de
-    profondeur, comme le matériel.
-  - `scene.frag` reprend ces fonctions (une pour le System 22, une pour le
-    Super 22, une pour les sprites). Il lit les textures (tilemap de
-    textures, attributs, tuiles) et les sprites dans les ROM, envoyées une
-    seule fois sur le GPU. Le mélange avec la destination passe par l'étage
-    fixe. Une seconde sortie (image de priorité R8) marque les pixels
-    couverts et le bit « au-dessus du texte » du dernier polygone.
-  - `mix.frag` reprend `namcos22_mix_text_layer` (ombres, fondu, gamma des
-    PROM) et `namcos22s_mix_text_layer` (spot, alpha du texte, fondu, gamma
-    du mixeur), avec la couche de texte et sa carte de priorité natives,
-    envoyées à chaque image. Sur le Super 22, le texte est aussi mélangé
-    au fond avant la scène, comme dans le rendu logiciel.
-  - Image relue et montrée sans copie (anneau de 3), comme le Voodoo. Le
-    rendu se fait au moment de l'affichage et on attend le GPU (pas
-    d'échange de tampons à anticiper sur ce matériel).
-  - Il faut `independentBlend` (couleur mélangée, priorité écrite telle quelle).
-  - Contrôle contre le logiciel HD, même image : ridgerac 2,5 % de pixels
-    au-delà de 24, dirtdash 0,14 %, raverace 3,9 %, acedrive 1,2 %,
-    alpinerd 1,6 %. Les écarts sont des bords de texels décalés d'un pixel
-    (interpolation en float sur le GPU, en double sur le CPU).
-  - Temps, ×2 : ridgerac 40 s émulées en 12,2 s (logiciel 42,9 s, natif
-    14,8 s) ; dirtdash 60 s en 25,4 s (logiciel 84,3 s, natif 34,3 s) ;
-    raverace 29,2 s (logiciel 101 s) ; acedrive 34,5 s (75 s) ; alpinerd
-    31 s (100 s). Le GPU fait mieux que le rendu natif, qui rastérise sur
-    le CPU.
-- 2026-10-31 : **Konami K001005 sur Vulkan** (`k001005_vk`).
-  - Le K001005 envoie ses triangles au GPU au lieu de les rastériser. Le
-    shader `tri.frag` reprend `draw_scanline_generic` : texels de la ROM du
-    K001006 (envoyée une fois) et sa palette (envoyée avec chaque lot),
-    miroir, bilinéaire, lumière diffuse et ambiante, brouillard, couleur par
-    sommet ou par polygone.
-  - Le z-buffer flottant du matériel devient la profondeur du GPU : le Z est
-    multiplié par 2^-40, ce qui ne change pas son ordre en flottant, avec
-    `depthClamp` puisque la puce ne coupe pas en Z.
-  - Les mélanges avec l'image (texture bilinéaire semi-transparente, puis
-    brouillard, puis mélange du polygone) sont tous linéaires en la couleur
-    de destination. Le shader calcule donc « A + K × destination » et la
-    double source du GPU fait l'addition.
-  - Deux pages et un z-buffer partagé ; l'échange de pages devient un
-    effacement. Les lots partent sans attendre (tous les 1024 triangles et à
-    chaque échange).
-  - À l'affichage HD, GTI Club, Jet Wave et Midnight Run / Winding Heat
-    font composer l'écran par le GPU : couche 2D du fond (native), pixels
-    opaques de la page 3D, couche 2D du dessus (native). L'image relue est
-    montrée sans copie. La composition n'envoie que sa propre passe, pour
-    ne pas attendre les triangles de la page en cours. Quand rien n'a changé
-    (même page, mêmes couches), l'image précédente est remontrée.
-  - Contrôle : midnrun identique au logiciel HD (0,02 % des pixels
-    au-delà de 24) ; gticlub identique sur ses écrans 2D, avec le décalage
-    d'écran (40, 28). Sa démo 3D n'a pas été atteinte : l'appui sur Test
-    pour passer « DEVICE ERROR (STEERING WHEEL) » ouvre le menu de test.
-  - Temps, midnrun 60 s émulées en ×2 : 14,3 à 17,1 s en Vulkan, 12,7 s en
-    natif, 27,5 s en logiciel. Il reste environ 1 ms d'attente par image
-    composée (composition et relecture), sur environ 1500 images composées.
-- 2026-11-02 : **Midway V-Unit sur Vulkan** (`midvunit_vk`).
-  - La copie HD des deux pages de mémoire vidéo est sur le GPU (images R16
-    de 512·N de côté). Les quads de la file DMA y sont dessinés par un port
-    des rastériseurs par ligne (aplat, texture, texture transparente,
-    texture masquée). Comme `poly_manager::render_polygon<4>` interpole par
-    ligne le long des arêtes gauche et droite (quads non plans), le shader
-    de fragments réévalue ces arêtes à sa ligne. Il reprend aussi les
-    arrondis, le clip appliqué avant le calcul des paramètres, les
-    coordonnées de texture entières et le tramage.
-  - Les écritures CPU dans la mémoire vidéo sont groupées en segments de
-    pixels voisins, dessinés en blocs N×N. Une écriture dans la mémoire de
-    textures n'envoie le lot en cours que si elle touche la fenêtre de
-    textures qu'il utilise.
-  - Au changement de page, la page visible est convertie tout de suite par
-    la palette dans une image d'affichage, relue sans attendre (3 tampons).
-    À la mise à jour de l'écran, cette image est montrée sans copie si la
-    page et la palette n'ont pas changé ; sinon les lignes sont converties
-    dans l'ordre du dessin, ce qui garde les fondus par la palette.
-  - Après un chargement d'état, les deux pages sont refaites depuis la
-    mémoire native ; si Vulkan échoue, le rendu repasse en logiciel HD.
-  - NVRAM calibrées pour crusnusa et crusnwld (Enter, c'est-à-dire Test,
-    aux écrans « CALIBRATE CONTROLS ») : les deux jeux atteignent la démo
-    3D. ROM copiée : offroadc.
-  - Contrôle en ×2, 120 s de démo : crusnwld et offroadc identiques au
-    logiciel sur 12 captures ; crusnusa identique sur 7 captures, à 4
-    pixels près sur une ligne (arrondi flottant).
-  - Temps pour 120 s émulées (portable, mesures assez dispersées) :
-    crusnusa ×2 43,5 à 58,9 s en Vulkan, 53,2 s en logiciel, 38,8 à 52 s en
-    natif ; crusnusa ×4 60,2 s en Vulkan, 81,1 s en logiciel, natif 50,3 et
-    52,2 s mesurés juste avant et après ; crusnwld ×2 59,2 s en Vulkan,
-    79,4 s en logiciel, 58,7 s en natif ; offroadc ×2 46,3 s en Vulkan,
-    57,8 s en logiciel. Le rendu coûte environ 3 s de CPU sur 120 s, dont
-    environ 1 s d'attente du GPU, surtout pour les images converties à la
-    mise à jour au lieu de l'être au changement de page.
-- 2026-11-02 : **Midway Zeus 2 sur Vulkan** (`zeus2_vk`).
-  - La copie HD du tampon image (couleur et profondeur, avec la structure
-    de lignes native × N) est sur le GPU, et la mémoire d'ondes (16 Mo,
-    textures) y est recopiée par pages de 16 Ko écrites depuis le lot
-    précédent.
-  - Chaque triangle de `render_triangle_fan` est préparé sur le CPU comme
-    le fait `render_triangle` (tri en Y, lignes couvertes, pentes, plans des
-    paramètres). Le shader de fragments en déduit l'étendue de sa ligne, la
-    profondeur entière (départ tronqué puis pas entiers), u/z, v/z et 1/z,
-    puis applique `render_poly_8bit` : plancher de profondeur, couleur
-    pleine, RGB555, texels avec alpha, texels par palette avec le filtre
-    bilinéaire de `rgbaint_t` (version SSE) et la couleur transparente.
-  - La profondeur 24 bits devient celle du GPU (D32, valeur / 2^24, exacte).
-    Le mélange « source × a + destination × b » passe par la double source
-    du GPU : seul l'arrondi de la part de la destination peut différer d'un
-    niveau.
-  - La palette est copiée dans le lot quand elle change ; une écriture dans
-    la mémoire d'ondes envoie d'abord les triangles en attente.
-  - Remplissages et écritures de l'hôte deviennent des segments de pixels
-    natifs, dessinés en blocs N×N.
-  - Quand l'adresse d'affichage change (registre 0x38), les lignes affichées
-    sont relues sans attendre ; la mise à jour de l'écran les montre si
-    rien n'a été dessiné dedans depuis.
-  - Défaut corrigé au passage : le mode logiciel ne doit pas recopier le
-    tampon natif au démarrage, `m_yScale` n'y est pas encore fixé (plantage
-    en ×4).
-  - Contrôle, démo de crusnexo sur 120 s, 8 captures : écart moyen de 0 à
-    0,33 niveau, au plus 0,05 % des pixels au-delà de 24 (halos mélangés).
-  - Temps pour 120 s émulées : ×2 89 à 105 s en Vulkan, 164 à 169 s en
-    logiciel, 82 s en natif ; ×4 107 à 111 s en Vulkan, 334 s en logiciel,
-    78 à 102 s en natif (portable qui chauffe). Environ 1600 triangles et
-    moins de 2 lots par image ; 3 s d'attente du GPU sur 120 s.
-- 2026-11-02 : **Namco System 21 sur Vulkan** (`namcos21_vk`).
-  - Les deux tampons image (numéros de couleur R16 et profondeur) sont sur
-    le GPU à N fois la taille native ; les tampons du CPU restent natifs,
-    pour l'écran natif et la profondeur que lisent les sprites de Driver's
-    Eyes.
-  - Pour chaque triangle, le CPU fait avancer les arêtes en double comme
-    `rendertri` et garde l'étendue de chaque ligne (un mot par ligne). Le
-    GPU remplit ces étendues avec le test de profondeur (zsort constant par
-    quad, exact en D32). Le CPU ne fait donc plus qu'un travail par ligne,
-    et l'image est exactement celle du logiciel.
-  - L'écran est mélangé sur le GPU puis relu : Winning Run y a sa couche 2D
-    (mémoire de 512 Ko recopiée par pages écrites, `bitmap_draw` porté avec
-    les trois priorités) ; Driver's Eyes reçoit à chaque image l'écran natif
-    sous la 3D et les pixels changés par les sprites du dessus. La palette
-    ajustée est envoyée avec le mélange.
-  - `hires3d_output::use_frame()` accepte un rappel « image prête », appelé
-    juste avant que l'affichage prenne l'image. L'attente de la relecture
-    est faite là : les trois cartes de Driver's Eyes travaillent en même
-    temps sur le GPU au lieu de s'attendre l'une l'autre (attente totale de
-    25 s à 6 s sur 60 s).
-  - Contrôle, 6 captures sur 60 s : Winning Run identique au logiciel ;
-    Driver's Eyes identique sur l'écran central. Les écrans de côté
-    dépendent du link entre les trois cartes, qui échoue parfois au
-    démarrage (« RECEIVE ERROR »), en natif aussi : la partie diverge d'une
-    exécution à l'autre.
-  - Temps pour 60 s émulées : winrun natif 29 à 31 s, ×2 33 s en Vulkan
-    contre 41 à 55 s en logiciel, ×4 44 s contre 87 s ; driveyes natif
-    65 s, ×2 88 s contre 109 à 182 s, ×4 112 s contre 197 s.
-- 2026-11-02 : **Taito JC (TC0780FPA) sur Vulkan** (`tc0780fpa_vk`).
-  - Même organisation que System 21 : deux tampons de numéros de couleur et
-    une profondeur 16 bits (exacte en D32) sur le GPU, effacés à l'échange ;
-    les tampons du CPU restent natifs pour l'écran natif.
-  - Triangles (`render_triangle`, plans des paramètres) et quads
-    (`render_polygon<4>`, paramètres le long des arêtes) préparés sur le
-    CPU, puis le shader reprend l'étendue de la ligne et les trois
-    rastériseurs (plein, ombré, texturé avec bouclage). Les paramètres
-    avancent en `départ + k × pas` au lieu d'additions successives, d'où
-    de rares pixels différents.
-  - La mémoire de textures (4 Mo) est recopiée par pages écrites ; l'écran
-    mélange sur le GPU les couches natives du dessous, la 3D et les couches
-    du dessus (objets et texte), puis la palette, avec l'attente reportée au
-    moment où l'affichage prend l'image.
-  - Contrôle, Side by Side sur 90 s, 9 captures : au plus 0,07 % des pixels
-    au-delà de 24. Dangerous Curves n'atteint pas la 3D en 90 s (le mélange
-    est identique).
-  - Temps pour 90 s émulées : sidebs natif 86 s, ×2 104 s en Vulkan contre
-    147 s en logiciel ; dangcurv natif 34 s, ×2 47 s contre 54 s. En ×4,
-    la relecture de l'image (13 Mo) coûte 3,3 ms d'attente par image : il
-    faudra passer l'image du GPU à l'affichage sans la relire. (Mesures ×4
-    faites pendant que deux autres MAME tournaient sur le portable.)
-- 2026-11-02 : **Gaelco 3D sur Vulkan** (`gaelco3d_vk`).
-  - Le tampon image (jamais effacé par le matériel) et la profondeur 16 bits
-    sont sur le GPU, à l'envers comme l'écran les montre ; les tampons du
-    CPU restent natifs.
-  - Chaque triangle de l'éventail est préparé comme `render_triangle` ; le
-    shader reprend l'étendue de la ligne puis les trois rastériseurs : plans
-    de u/z, v/z et 1/z, masque de texture, filtre bilinéaire COLOR3D, mélange
-    à 50 % (double source, la moitié de la destination arrondie par le GPU).
-  - Le test de profondeur compare la valeur signée et écrit sa valeur
-    absolue : le signe dépend de z0, fixe par polygone, d'où une variante
-    de pipeline (comparaison ou non) par polygone.
-  - La texture et son masque (en bits) sont envoyés une fois ; la palette
-    est copiée dans le lot quand elle change ; la relecture est attendue
-    quand l'affichage prend l'image.
-  - Contrôle sur 60 s : speedup identique au logiciel sur 7 captures,
-    radikalb à 0,07 % des pixels près.
-  - Temps pour 60 s émulées : speedup natif 24 à 27 s, ×2 29 s en Vulkan
-    contre 33 s en logiciel, ×4 38 s contre 90 à 108 s ; radikalb natif 33 s,
-    ×2 36 s contre 41 à 53 s.
-- 2026-11-02 : **SNK HNG64 sur Vulkan** (`hng64_vk`).
-  - Le tampon 3D (numéros de couleur avec lumière et bit de mélange) et sa
-    profondeur flottante sont sur le GPU à N fois 512 × 512 ; la profondeur
-    est stockée en Z / 128, ce qui garde l'ordre et la valeur 100 de
-    l'effacement exactes. Les tampons du CPU restent natifs.
-  - Triangles de `drawShaded` préparés comme `render_triangle` (plans de Z,
-    W, lumière, S et T) ; le shader reprend l'étendue de la ligne puis les
-    rastériseurs plein et texturé (division de perspective, défilement de
-    texture, petites pages avec `fmod` du C, texels 4 ou 8 bits). La ROM de
-    textures (16 Mo) part avec le premier lot.
-  - L'écran est mélangé sur le GPU : couches natives sous la 3D, `blit_3d`
-    porté (défilement, étirement vertical, palette 3D à 16 luminosités,
-    mélange à 50 % calculé exactement dans le shader), puis les pixels
-    changés par les couches du dessus.
-  - Contrôle sur 90 s, 9 captures par jeu : au plus 0,54 % des pixels
-    au-delà de 24 (texture de la route de xrally).
-  - Temps pour 90 s émulées : roadedge natif 136 s, ×2 144 s en Vulkan
-    contre 168 s en logiciel ; xrally natif 126 s, ×2 132 s contre 138 s.
-    L'émulation elle-même est lourde, le gain est donc faible. xrally attend
-    le GPU 28 s (5 ms par image) : à examiner.
-- 2026-11-07 : **Vraie 3D sur le GPU pour cinq puces** (Taito JC, Gaelco 3D,
-  HNG64, System 21, Zeus 2). Avant, le CPU rastérisait toujours en natif et le
-  GPU redessinait chaque triangle dans une boîte, le shader recalculant
-  l'étendue de chaque ligne.
-  - Le GPU rastérise maintenant les primitives elles-mêmes, et le raster CPU
-    est coupé. Le V-Unit reste tel quel : sommets entiers, mémoire vidéo lue
-    par le CPU, et rendu de toute façon peu coûteux.
-  - Taito JC : les triangles sont interpolés par le GPU. Les quads restent
-    évalués le long de leurs arêtes dans le shader, car deux triangles feraient
-    un pli sur un quad qui n'est pas un parallélogramme. La profondeur reste
-    calculée par pixel (arrondi du matériel), mais une borne inférieure donnée
-    au GPU lui permet de rejeter les pixels cachés avant le shader.
-  - HNG64 : paramètres et profondeur interpolés par le GPU, plus d'écriture de
-    profondeur dans le shader. Les couches 2D au-dessus de la 3D peuvent s'y
-    mélanger (alpha, addition) : dessinées sur une marque, elles portent dans
-    leur alpha ce qu'il faut garder du dessous, et le GPU fait le mélange.
-  - System 21 : les quads sont dessinés avec un décalage d'un demi-pixel, qui
-    reprend les pixels remplis par `rendertri` (arêtes prises en haut de ligne).
-    Les stylos 0, 1 et 0xff des sprites du dessus de Driver's Eyes dépendent de
-    ce qu'ils couvrent : ils sont notés dans le stylo et appliqués par le GPU.
-    `namcos21_c67` et `gal3` n'affichent pas d'image HD : `set_hires_supported`
-    les laisse en natif (Cyber Sled vérifié).
-  - Zeus 2 : le CPU peut lire le tampon image (534 000 lectures au démarrage de
-    crusnexo). Le raster natif reprend donc 2 secondes après chaque lecture,
-    comme pour le Voodoo. Sinon, plus rien n'est mis en file pour le rendu
-    logiciel : `object_data().next()` sans `wait()` devenait très lent (611 s
-    au lieu de 50 s). Un scissor limite les triangles à la fenêtre de rendu.
-  - Contrôle contre le logiciel HD, pixels au-delà de 24, pire capture : sidebs
-    0,05 %, dangcurv 0,00 %, speedup 0,00 %, radikalb 0,05 %, roadedge 0,09 %,
-    xrally 0,02 %, winrun 0,35 %, driveyes 0,26 %, crusnexo 0,01 %. Repli
-    logiciel relancé sur les cinq puces. Sauvegarde puis rechargement d'état
-    sans plantage sur les cinq puces, mais crusnexo y restait sur l'écran de
-    calibration, sans 3D.
-  - Temps CPU total (tous les threads), avant puis après, durée émulée fixe,
-    portable, un seul essai par mesure :
+1. Try sharing with bgfx on an AMD or Intel card. Measurements on the laptop
+   RTX 3050, at ×4, window without speed limit: crusnusa 441 % vs 287 % with
+   read-back, crusnwld 338 vs 245, offroadc 442 vs 294, crusnexo 306 vs 223.
+   The gain is small or nil at ×2. Intel UHD of this PC (2026-11-09, Vulkan
+   and bgfx forced on it): crusnexo, crusnwld, xrally, ridgerac, midnrun,
+   sf2049, winrun, radikalb and sidebs run, images identical to NVIDIA
+   (0.13 % at worst on sf2049). Rare crash at sfrush startup fixed: the
+   faulting address was 184 pixels before a read-back image, the offset of
+   the native `xoffs`. If the visible area changes between preparation and
+   display, `update_texture` computed the current area; it now takes the
+   image's. The case has not reappeared over 42 launches, with no crash, so
+   the fix has not been exercised directly. `frames_freed` also copies a
+   shown image whose memory is freed. Isolated black snapshots of ridgerac
+   and radikalb, no black image in the in-game snapshots. AMD not tested.
+2. HNG64: the 2D lines are kept on the GPU, only those that change are sent
+   (done, 2026-11-09: 23 to 33 % of the lines, upload time divided by 2.4,
+   wait -15 %, identical images; no measurable speed gain). xrally race at
+   ×2, without display: 5.1 ms wait per frame before this change (read-back
+   47 %, uploads 30 %, drawing 22 %). The K001005 (midnrun) only waits 0.5 ms
+   per frame: nothing to do.
+   `-widescreen_bg` with `-widescreen_2d stretch`: the layers below the 3D are
+   stretched when they do not extend beyond the 4:3 screen (roadedge and
+   xrally menus), and stay in place otherwise (race).
+   **MIPS fix**: sfrush froze after 49.5 s (all our versions since g8e81ca4).
+   Upstream commit fde5b471bfc arms the compare on a write to Count; Compare
+   stays at 0xffffffff, the game never writes to it and IP7 stays raised when
+   Count wraps. The arming is removed (`mips3.cpp`, `mips3drc.cpp`). sfrush
+   continues past 50 s, in demo and with coin and accelerator; xrally is
+   identical over 45 s and continues past 50 s, roadedge and cartfury too;
+   sf2049 continues (its demo is not deterministic, even on the old version).
+   dev/ffbedition has the same bug.
+3. Banshee/Voodoo 3: sf2049se tried up to the race, correct (2026-11-09).
+   Non-racing games remain (Viper, nbashowt); 2D blits between buffers lose
+   the HD (no blit reading a buffer over 100 s of sf2049 and cartfury).
+   Voodoo: the native rasterizer still runs during the game, restarted by CPU
+   reads (over 100 s: sfrush fbiPixelsIn ×2151 and buffer ×4122, i.e.
+   2.4 cores; sf2049 the 5 stats registers ×528, 1 core; cartfury buffer
+   ×945, 0.4 core). To stop it: count the pixels on the GPU and read back the
+   areas that are read. Not needed for speed (177 to 376 % at ×2).
+   Zeus 2: no more measurable software fallback (crusnexo).
+   To support (owner's request, 2026-11-10): thrilld (Hornet, Voodoo) and, on
+   Viper (Voodoo 3), thrild2 and xtrial. All "not working" in MAME: first see
+   what blocks them; ROMs not yet copied, Viper never tried.
+4. System 23, Taito Type Zero and Konami Cobra, when their emulation works.
+   Requested by the owner (2026-11-10): the PS1 GPU (`psxgpu`), for the
+   PlayStation-derived systems (Namco System 11: pocketrc, System 12:
+   kartduel, ...). Integer vertices: more resolution, but the polygons still
+   wobble.
+5. HNG64 in software at scales that are not powers of 2 (×3, ×5…): replace
+   the `size - 1` masks of the rasterizers and of `blit_3d` (the GPU path is
+   already fixed).
+- 2026-10-31: **Namco System 21** in HD software.
+  - `namcos21_3d`: buffers × N, (integer) vertices scaled, which sharpens the
+    edges. A native copy of the visible depth remains available for Cyber
+    Sled's sprite blending.
+  - Winning Run: indexed blending at HD resolution. `bitmap_draw` reads the
+    native 2D for each HD pixel, shadows included, then the conversion goes
+    through the adjusted palette (`hires3d_output::indexed_to_frame`).
+  - Driver's Eyes: sprites and blending in native, 3D copied in HD. Only the
+    pixels that priority-15 sprites modify (shadows on the 3D) are carried
+    over in blocks.
+  - ROMs copied: winrun, driveyes, namcoc65, namcoc68.
+- 2026-10-31: **Taito JC** in HD software: TC0780FPA buffers × N, (integer)
+  vertices scaled. Indexed blending: background objects enlarged, HD 3D,
+  foreground objects and text enlarged with the sentinel value 0xffff as
+  transparency.
+- 2026-10-31: **Side by Side speed**, fixed on `dev/ffbedition` (efc1acdba1e,
+  ba474f170be) then merged here.
+  - Before: the demo race ran at 8-10 3D frames/s.
+  - 68040-specific FPU timings in the 68k core: about 20 frames/s.
+  - 68040 clock × 1.5: stable 30 frames/s (one frame in two).
+  - Idle skip on the 68040 wait loop, which polls the DSP status word:
+    unthrottled speed from 102 % to 144 % (sidebs) on the laptop.
+- 2026-10-31: **Gaelco 3D** in HD software. The DSP supplies per-pixel plane
+  equations (u/z, v/z, 1/z): their gradients are divided by N, the vertices
+  multiplied by N, the frame buffer and the z-buffer are enlarged × N. The
+  buffer is stored upside down; it is flipped when copying to the HD image
+  and sampled for the native screen.
+- 2026-10-31: **SNK HNG64** in HD software.
+  - 3D buffers (index, light, blend bit) of 512 × N per side; vertices and
+    clipping scaled.
+  - `blit_3d()` is used for the native screen (sampled) and for the HD image
+    (vertical stretch and x scroll scaled, 50 % blending).
+  - Background layers enlarged. Foreground layers blended in native; only the
+    pixels they change are carried over in blocks.
+  - Frames without 3D (screen off, transitions) are published enlarged.
+  - `hng64.zip` (BIOS) replaced by the one from the share, which adds three
+    configuration PROMs (same CRCs for the rest).
+- 2026-10-31: **Midway Zeus 2** in HD software.
+  - HD copy of the colour and depth buffer, with the same line structure (512
+    or 1024 pixels depending on `m_yScale`) × N.
+  - The rasterizer writes through a window start pointer and a line length,
+    which serves the native buffer as well as the HD buffer.
+  - Polygons drawn in both, vertices and clipping × N.
+  - Fast fill and `frame_write` copied in blocks; the HD display reads the
+    copy.
+  - Test: Cruis'n Exotica, calibration passed by script (5 presses of
+    "Service Mode"), 3D demo mode correct at ×2.
+  - ROMs copied: crusnexo, tms320c32.
+- 2026-10-31: **3dfx Voodoo 1/2** in HD software (Banshee and Voodoo 3 not
+  concerned).
+  - HD copy of the whole frame memory: a line of `rowpixels` native pixels
+    becomes N lines of `rowpixels` × N pixels, with a margin on each side. The
+    colour and depth buffers keep their address in it.
+  - Line length and Y origin passed per polygon (`poly_data`) instead of the
+    rasterizer's global state, to draw each triangle a second time in the HD
+    copy.
+  - HD triangle: vertices and clipping × N, gradients ÷ N, start values
+    recentred on the HD pixel when sub-pixel correction is active. A triangle
+    that would go outside the HD copy is not drawn in it.
+  - Fast fills redone in HD. LFB writes (raw or through the pipeline) and the
+    Voodoo 2 blit fill copied in blocks.
+  - HD display read from the copy of the front buffer. `hires()` lets the
+    driver carry over the pixels its 2D changes: NWK-TR and Hang Pilot
+    (K001604) do it, with the new `hires3d_output::magnify_changes()`.
+  - Tests: sfrush ×2 and ×4, racingj ×2 (K001604 text on top), roadburn ×2
+    (Voodoo 2): correct images.
+  - High CPU cost: 110 emulated s of racingj in 109 s native and 210 s at ×2,
+    80 s of roadburn in 85 s native and 232 s at ×2. Hence the priority on the
+    Vulkan renderer for this chip.
+  - ROMs copied: sfrush (+ CHD), racingj, roadburn (+ CHD).
+- 2026-10-31: **3dfx Voodoo 1/2 on Vulkan** (`voodoo_vk`), chosen by default
+  when Vulkan is available (`-hires3d_renderer software` keeps the HD software
+  renderer).
+  - The Voodoo pixel pipeline runs in a fragment shader (`tri.frag`). It
+    recomputes each pixel's iterated values with the same integer arithmetic
+    as the software rasterizer (64-bit integers for W and textures), and reads
+    the texels directly from the TMU memory, copied to the GPU page by page
+    when it changes. So there is no texture cache. The texel tables, palettes
+    and fog tables are in a lookup buffer. Depth test, blending ("colour
+    before fog" through dual source) and pixel order go through the GPU's
+    fixed-function stages.
+  - One image per colour buffer and one depth image, × N. Fast fills and
+    blits as clears, LFB writes in blocks.
+  - Batches sent to the GPU without waiting (every 256 triangles), on a ring
+    of 3. The display waits for the current batch to finish and reads back the
+    front buffer. The colour table (CLUT) is applied during read-back, unless
+    it is linear.
+  - When Vulkan draws, the native rasterizer is skipped, except for 2 seconds
+    after a CPU read of the frame buffer (sfrush does some at startup,
+    roadburn too). The Voodoo's emulated time then comes from the triangle
+    area: the demo may drift a little compared to native rendering, but the
+    image of a given scene is the same.
+  - A Voodoo that is not displayed does not draw its HD copy (Racing Jam has
+    two).
+  - Type 5 CMDFIFO packets that write directly into the Voodoo 2 frame memory
+    are copied in HD (software and Vulkan).
+  - Check: mean difference from HD software of 0 to 1.6 out of 255, no pixel
+    beyond 24 (0.01 % on roadburn). The differences come from the 565
+    dithering that the GPU does not do.
+  - Times on the laptop (RTX 3050), ×2, very variable from one run to the
+    next: racingj 110 emulated s in 127 s (software 194 s, native 109 s),
+    roadburn 30 s in 21.7 s (native 14 s), sfrush 60 s in 22.7 s (native
+    18 s). The GPU wait follows the pixel count (3.4 ms per frame at ×2,
+    10.6 ms at ×4 on roadburn): it is mostly the image read-back and its copy
+    into the bitmap.
+  - Next: read-back without waiting and direct image (next entry).
+- 2026-10-31: **Voodoo on Vulkan, read-back without waiting and direct image.**
+  - At vblank, MAME shows the buffer that became the front buffer at the
+    previous swap. So right after each swap, the read-back of the new front
+    buffer starts on the GPU without waiting, and it has a whole frame to
+    arrive. No frame of delay: the image shown is the same as before.
+  - Read-backs go into a ring of 3 buffers. The display shows the read-back
+    memory directly, without a copy, thanks to the new
+    `hires3d_output::use_frame()`. The read-back being shown is not
+    overwritten before the next frame.
+  - Drivers that draw their 2D on top (NWK-TR, Hang Pilot, via `hires()`)
+    keep a copy, so no old text is left in the read-back memory.
+  - The DAC CLUT, when it is not linear (roadburn), is applied on the GPU by
+    a full-screen pass into a display image, which is read back instead of
+    the color buffer.
+  - When only the GPU draws, the native buffer is no longer converted for the
+    native screen (it is neither drawn nor shown). The estimated pixel count
+    for the Voodoo timing takes the clip rectangle into account: without it,
+    large off-screen triangles made the chip look busier and the CPU spun
+    more on its state.
+  - roadburn, 30 s emulated, best of 3 alternating runs: before this step
+    16.5 s native vs 20.3 s Vulkan ×2; after, 19.7 s vs 19.8 s (the laptop
+    heats up, hence the spread). GPU wait: from 3.5 s to 0.02 s, all frames
+    shown without a copy.
+  - Left: share the image with the display (bgfx) to remove the read-back
+    itself.
+- 2026-10-31: **Namco System 22 / Super 22 on Vulkan** (`namcos22_vk`), same
+  method as the Voodoo.
+  - The walk over the sorted scene sends each quad (fan of 3 to 6 vertices
+    after z clipping) and each sprite to the GPU, with what the per-line
+    render functions read from their data: palette, color mode, texture
+    bank, shading, fog, fades, alpha, priority. The GPU draws them in sort
+    order, without a depth buffer, like the hardware.
+  - `scene.frag` ports these functions (one for System 22, one for Super 22,
+    one for sprites). It reads textures (texture tilemap, attributes, tiles)
+    and sprites from the ROMs, uploaded to the GPU only once. Blending with
+    the destination goes through the fixed-function stage. A second output
+    (R8 priority image) marks covered pixels and the "above text" bit of the
+    last polygon.
+  - `mix.frag` ports `namcos22_mix_text_layer` (shadows, fade, PROM gamma)
+    and `namcos22s_mix_text_layer` (spot, text alpha, fade, mixer gamma),
+    with the native text layer and its priority map, uploaded every frame.
+    On Super 22, the text is also mixed into the background before the
+    scene, as in the software renderer.
+  - Image read back and shown without a copy (ring of 3), like the Voodoo.
+    Rendering happens at display time and we wait for the GPU (no buffer
+    swap to anticipate on this hardware).
+  - `independentBlend` is required (color blended, priority written as is).
+  - Check against software HD, same frame: ridgerac 2.5% of pixels above 24,
+    dirtdash 0.14%, raverace 3.9%, acedrive 1.2%, alpinerd 1.6%. The
+    differences are texel edges shifted by one pixel (float interpolation on
+    the GPU, double on the CPU).
+  - Times, ×2: ridgerac 40 s emulated in 12.2 s (software 42.9 s, native
+    14.8 s); dirtdash 60 s in 25.4 s (software 84.3 s, native 34.3 s);
+    raverace 29.2 s (software 101 s); acedrive 34.5 s (75 s); alpinerd 31 s
+    (100 s). The GPU beats the native renderer, which rasterizes on the CPU.
+- 2026-10-31: **Konami K001005 on Vulkan** (`k001005_vk`).
+  - The K001005 sends its triangles to the GPU instead of rasterizing them.
+    The `tri.frag` shader ports `draw_scanline_generic`: texels from the
+    K001006 ROM (uploaded once) and its palette (sent with each batch),
+    mirroring, bilinear, diffuse and ambient light, fog, per-vertex or
+    per-polygon color.
+  - The hardware's float z-buffer becomes the GPU depth: Z is multiplied by
+    2^-40, which does not change its order as a float, with `depthClamp`
+    since the chip does not clip in Z.
+  - The blends with the image (semi-transparent bilinear texture, then fog,
+    then polygon blend) are all linear in the destination color. So the
+    shader computes "A + K × destination" and the GPU dual source does the
+    addition.
+  - Two pages and a shared z-buffer; the page swap becomes a clear. Batches
+    are sent without waiting (every 1024 triangles and at each swap).
+  - On HD display, GTI Club, Jet Wave and Midnight Run / Winding Heat have
+    the GPU compose the screen: background 2D layer (native), opaque pixels
+    of the 3D page, top 2D layer (native). The read-back image is shown
+    without a copy. Composition submits only its own pass, so it does not
+    wait for the triangles of the current page. When nothing has changed
+    (same page, same layers), the previous image is shown again.
+  - Check: midnrun identical to software HD (0.02% of pixels above 24);
+    gticlub identical on its 2D screens, with the screen offset (40, 28).
+    Its 3D demo was not reached: pressing Test to get past "DEVICE ERROR
+    (STEERING WHEEL)" opens the test menu.
+  - Times, midnrun 60 s emulated at ×2: 14.3 to 17.1 s in Vulkan, 12.7 s
+    native, 27.5 s software. About 1 ms of wait remains per composed frame
+    (composition and read-back), over about 1500 composed frames.
+- 2026-11-02: **Midway V-Unit on Vulkan** (`midvunit_vk`).
+  - The HD copy of the two video memory pages is on the GPU (R16 images of
+    512·N per side). The quads from the DMA queue are drawn into it by a port
+    of the per-line rasterizers (flat, textured, transparent textured, masked
+    textured). Since `poly_manager::render_polygon<4>` interpolates per line
+    along the left and right edges (non-planar quads), the fragment shader
+    re-evaluates these edges at its line. It also ports the rounding, the
+    clip applied before computing the parameters, the integer texture
+    coordinates and the dithering.
+  - CPU writes to video memory are grouped into segments of neighboring
+    pixels, drawn as N×N blocks. A write to texture memory only submits the
+    current batch if it touches the texture window that batch uses.
+  - On page change, the visible page is converted right away through the
+    palette into a display image, read back without waiting (3 buffers). On
+    screen update, this image is shown without a copy if the page and the
+    palette have not changed; otherwise the lines are converted in drawing
+    order, which keeps the palette fades.
+  - After a state load, both pages are rebuilt from native memory; if Vulkan
+    fails, rendering falls back to software HD.
+  - Calibrated NVRAMs for crusnusa and crusnwld (Enter, i.e. Test, at the
+    "CALIBRATE CONTROLS" screens): both games reach the 3D demo. ROM copied:
+    offroadc.
+  - Check at ×2, 120 s of demo: crusnwld and offroadc identical to software
+    on 12 captures; crusnusa identical on 7 captures, within 4 pixels on one
+    line (float rounding).
+  - Times for 120 s emulated (laptop, fairly scattered measurements):
+    crusnusa ×2 43.5 to 58.9 s in Vulkan, 53.2 s software, 38.8 to 52 s
+    native; crusnusa ×4 60.2 s in Vulkan, 81.1 s software, native 50.3 and
+    52.2 s measured just before and after; crusnwld ×2 59.2 s in Vulkan,
+    79.4 s software, 58.7 s native; offroadc ×2 46.3 s in Vulkan, 57.8 s
+    software. Rendering costs about 3 s of CPU over 120 s, of which about
+    1 s is GPU wait, mostly for images converted at update instead of at
+    page change.
+- 2026-11-02: **Midway Zeus 2 on Vulkan** (`zeus2_vk`).
+  - The HD copy of the frame buffer (color and depth, with the native line
+    structure × N) is on the GPU, and wave memory (16 MB, textures) is copied
+    there in 16 KB pages written since the previous batch.
+  - Each triangle from `render_triangle_fan` is prepared on the CPU the way
+    `render_triangle` does it (Y sort, covered lines, slopes, parameter
+    planes). The fragment shader derives from it the extent of its line, the
+    integer depth (truncated start then integer steps), u/z, v/z and 1/z,
+    then applies `render_poly_8bit`: depth floor, solid color, RGB555, texels
+    with alpha, palette texels with the bilinear filter of `rgbaint_t` (SSE
+    version) and the transparent color.
+  - The 24-bit depth becomes the GPU depth (D32, value / 2^24, exact). The
+    "source × a + destination × b" blend goes through the GPU dual source:
+    only the rounding of the destination part can differ by one level.
+  - The palette is copied into the batch when it changes; a write to wave
+    memory first submits the pending triangles.
+  - Fills and host writes become native pixel segments, drawn as N×N blocks.
+  - When the display address changes (register 0x38), the displayed lines
+    are read back without waiting; the screen update shows them if nothing
+    has been drawn into them since.
+  - Bug fixed along the way: software mode must not copy the native buffer
+    at startup, `m_yScale` is not set yet at that point (crash at ×4).
+  - Check, crusnexo demo over 120 s, 8 captures: mean difference of 0 to
+    0.33 level, at most 0.05% of pixels above 24 (blended halos).
+  - Times for 120 s emulated: ×2 89 to 105 s in Vulkan, 164 to 169 s
+    software, 82 s native; ×4 107 to 111 s in Vulkan, 334 s software, 78 to
+    102 s native (laptop heating up). About 1600 triangles and fewer than 2
+    batches per frame; 3 s of GPU wait over 120 s.
+- 2026-11-02: **Namco System 21 on Vulkan** (`namcos21_vk`).
+  - The two frame buffers (R16 color numbers and depth) are on the GPU at N
+    times the native size; the CPU buffers stay native, for the native screen
+    and for the depth read by the Driver's Eyes sprites.
+  - For each triangle, the CPU steps the edges in double like `rendertri`
+    and keeps the extent of each line (one word per line). The GPU fills
+    these extents with the depth test (zsort constant per quad, exact in
+    D32). So the CPU only does per-line work, and the image is exactly the
+    software one.
+  - The screen is mixed on the GPU then read back: Winning Run has its 2D
+    layer there (512 KB memory copied by written pages, `bitmap_draw` ported
+    with the three priorities); Driver's Eyes receives every frame the native
+    screen under the 3D and the pixels changed by the top sprites. The
+    adjusted palette is sent with the mix.
+  - `hires3d_output::use_frame()` accepts an "image ready" callback, called
+    just before the display takes the image. The read-back wait is done
+    there: the three Driver's Eyes boards work on the GPU at the same time
+    instead of waiting for each other (total wait from 25 s to 6 s over
+    60 s).
+  - Check, 6 captures over 60 s: Winning Run identical to software; Driver's
+    Eyes identical on the center screen. The side screens depend on the link
+    between the three boards, which sometimes fails at startup ("RECEIVE
+    ERROR"), in native too: the game diverges from one run to the next.
+  - Times for 60 s emulated: winrun native 29 to 31 s, ×2 33 s in Vulkan vs
+    41 to 55 s software, ×4 44 s vs 87 s; driveyes native 65 s, ×2 88 s vs
+    109 to 182 s, ×4 112 s vs 197 s.
+- 2026-11-02: **Taito JC (TC0780FPA) on Vulkan** (`tc0780fpa_vk`).
+  - Same layout as System 21: two color number buffers and a 16-bit depth
+    (exact in D32) on the GPU, cleared at swap; the CPU buffers stay native
+    for the native screen.
+  - Triangles (`render_triangle`, parameter planes) and quads
+    (`render_polygon<4>`, parameters along the edges) prepared on the CPU,
+    then the shader ports the line extent and the three rasterizers (solid,
+    shaded, textured with wrapping). Parameters advance as
+    `start + k × step` instead of successive additions, hence rare differing
+    pixels.
+  - Texture memory (4 MB) is copied by written pages; the screen mixes on
+    the GPU the native layers below, the 3D and the layers above (objects
+    and text), then the palette, with the wait deferred to when the display
+    takes the image.
+  - Check, Side by Side over 90 s, 9 captures: at most 0.07% of pixels above
+    24. Dangerous Curves does not reach 3D in 90 s (the mix is identical).
+  - Times for 90 s emulated: sidebs native 86 s, ×2 104 s in Vulkan vs
+    147 s software; dangcurv native 34 s, ×2 47 s vs 54 s. At ×4, the image
+    read-back (13 MB) costs 3.3 ms of wait per frame: the GPU image will
+    have to be passed to the display without reading it back. (×4
+    measurements taken while two other MAME instances ran on the laptop.)
+- 2026-11-02: **Gaelco 3D on Vulkan** (`gaelco3d_vk`).
+  - The frame buffer (never cleared by the hardware) and the 16-bit depth
+    are on the GPU, upside down as the screen shows them; the CPU buffers
+    stay native.
+  - Each triangle of the fan is prepared like `render_triangle`; the shader
+    ports the line extent then the three rasterizers: u/z, v/z and 1/z
+    planes, texture mask, COLOR3D bilinear filter, 50% blend (dual source,
+    half of the destination rounded by the GPU).
+  - The depth test compares the signed value and writes its absolute value:
+    the sign depends on z0, fixed per polygon, hence a pipeline variant
+    (compare or not) per polygon.
+  - The texture and its mask (as bits) are uploaded once; the palette is
+    copied into the batch when it changes; the read-back is waited for when
+    the display takes the image.
+  - Check over 60 s: speedup identical to software on 7 captures, radikalb
+    within 0.07% of pixels.
+  - Times for 60 s emulated: speedup native 24 to 27 s, ×2 29 s in Vulkan vs
+    33 s software, ×4 38 s vs 90 to 108 s; radikalb native 33 s, ×2 36 s vs
+    41 to 53 s.
+- 2026-11-02: **SNK HNG64 on Vulkan** (`hng64_vk`).
+  - The 3D buffer (colour numbers with light and blend bit) and its float
+    depth are on the GPU at N times 512 × 512; depth is stored as Z / 128,
+    which keeps the order and the clear value of 100 exact. The CPU buffers
+    stay native.
+  - `drawShaded` triangles are prepared like `render_triangle` (Z, W, light,
+    S and T planes); the shader takes over the line extent, then the flat and
+    textured rasterizers (perspective divide, texture scrolling, small pages
+    with C `fmod`, 4- or 8-bit texels). The texture ROM (16 MB) goes with the
+    first batch.
+  - The screen is mixed on the GPU: native layers under the 3D, `blit_3d`
+    ported (scrolling, vertical stretch, 3D palette with 16 brightness
+    levels, 50% blend computed exactly in the shader), then the pixels
+    changed by the layers on top.
+  - Check over 90 s, 9 captures per game: at most 0.54% of pixels above 24
+    (xrally road texture).
+  - Time for 90 emulated seconds: roadedge native 136 s, ×2 144 s on Vulkan
+    versus 168 s in software; xrally native 126 s, ×2 132 s versus 138 s.
+    The emulation itself is heavy, so the gain is small. xrally waits 28 s
+    for the GPU (5 ms per frame): to be looked at.
+- 2026-11-07: **Real 3D on the GPU for five chips** (Taito JC, Gaelco 3D,
+  HNG64, System 21, Zeus 2). Before, the CPU still rasterized at native
+  resolution and the GPU redrew each triangle in a box, with the shader
+  recomputing the extent of each line.
+  - The GPU now rasterizes the primitives themselves, and the CPU raster is
+    turned off. The V-Unit stays as it is: integer vertices, video memory read
+    by the CPU, and rendering cheap anyway.
+  - Taito JC: triangles are interpolated by the GPU. Quads are still
+    evaluated along their edges in the shader, because two triangles would
+    make a fold on a quad that is not a parallelogram. Depth is still computed
+    per pixel (hardware rounding), but a lower bound given to the GPU lets it
+    reject hidden pixels before the shader.
+  - HNG64: parameters and depth interpolated by the GPU, no more depth writes
+    in the shader. The 2D layers above the 3D can blend into it (alpha,
+    additive): drawn over a marker, they carry in their alpha what must be
+    kept from below, and the GPU does the blend.
+  - System 21: quads are drawn with a half-pixel offset, which matches the
+    pixels filled by `rendertri` (edges taken at the top of the line). Pens 0,
+    1 and 0xff of the top sprites in Driver's Eyes depend on what they cover:
+    they are flagged in the pen and applied by the GPU. `namcos21_c67` and
+    `gal3` do not show an HD image: `set_hires_supported` leaves them native
+    (Cyber Sled checked).
+  - Zeus 2: the CPU can read the frame buffer (534,000 reads at crusnexo
+    startup). So the native raster resumes for 2 seconds after each read, as
+    for the Voodoo. Otherwise, nothing is queued for software rendering any
+    more: `object_data().next()` without `wait()` had become very slow (611 s
+    instead of 50 s). A scissor limits triangles to the render window.
+  - Check against HD software, pixels above 24, worst capture: sidebs 0.05%,
+    dangcurv 0.00%, speedup 0.00%, radikalb 0.05%, roadedge 0.09%, xrally
+    0.02%, winrun 0.35%, driveyes 0.26%, crusnexo 0.01%. Software fallback
+    rerun on all five chips. Save state then load state without a crash on all
+    five chips, but crusnexo stayed on the calibration screen there, with no
+    3D.
+  - Total CPU time (all threads), before then after, fixed emulated duration,
+    laptop, a single run per measurement:
 
-    | Jeu | Natif | ×2 avant | ×2 après | ×4 avant | ×4 après |
+    | Game | Native | ×2 before | ×2 after | ×4 before | ×4 after |
     |---|---|---|---|---|---|
-    | sidebs (90 s) | 86,0 | 89,2 | 85,1 | 90,5 | 84,5 |
-    | speedup (60 s) | 52,1 | 44,0 | 18,1 | 51,7 | 23,9 |
-    | roadedge (60 s) | 88,1 | 92,2 | 88,6 | 85,8 | 74,7 |
-    | winrun (60 s) | 23,2 | 21,2 | 19,0 | 23,0 | 14,5 |
-    | driveyes (60 s) | 64,7 | 71,2 | 57,3 | 70,2 | 63,8 |
-    | crusnexo (120 s) | 91,8 | 102,5 | 52,2 | 103,9 | 51,5 |
+    | sidebs (90 s) | 86.0 | 89.2 | 85.1 | 90.5 | 84.5 |
+    | speedup (60 s) | 52.1 | 44.0 | 18.1 | 51.7 | 23.9 |
+    | roadedge (60 s) | 88.1 | 92.2 | 88.6 | 85.8 | 74.7 |
+    | winrun (60 s) | 23.2 | 21.2 | 19.0 | 23.0 | 14.5 |
+    | driveyes (60 s) | 64.7 | 71.2 | 57.3 | 70.2 | 63.8 |
+    | crusnexo (120 s) | 91.8 | 102.5 | 52.2 | 103.9 | 51.5 |
 
-    Le gain dépend de la part du raster dans le coût total : sidebs et roadedge
-    passent surtout leur temps dans les processeurs émulés et la 2D.
-    Le temps réel varie trop d'un essai à l'autre pour conclure : sidebs ×4 a mis
-    77 s puis 101 s avec le même exécutable.
-  - Parties automatisées (pièces, Start, accélérateur, mêmes entrées aux mêmes
-    images) sur le `mame.exe` complet, logiciel contre GPU, de 10 à 15 captures
-    par jeu, pixels au-delà de 24, pire capture : speedup 0,00 %, crusnexo
-    0,01 %, xrally 0,03 %, roadedge 0,04 %, sidebs 0,07 %, driveyes 0,40 %,
-    winrun 0,46 %. Vraies courses sur tous, sauf xrally (écrans 3D d'avant la
-    course). Essai de 25 s dans une fenêtre bgfx : sidebs, winrun et crusnusa
-    à 100 % de vitesse, sans erreur.
-- 2026-11-07 (suite) : **contrôles en fenêtre, attentes du GPU, Hornet**.
-  - Captures de l'image réellement affichée par bgfx (`PrintWindow`) : Speed
-    Up, Roads Edge et Cruis'n Exotica en ×2, Winning Run et Side by Side en ×4,
-    3D et 2D correctes. Le gros chiffre du départ de Roads Edge (un sprite 2D
-    avec son ombre noire) est le même en logiciel. L'essai en fenêtre précédent
-    couvrait crusnusa, un V-Unit qui n'avait pas changé.
-  - Hornet : la couche K037122 manquait en HD (texte, HUD). Elle est
-    maintenant agrandie comme sur nwk-tr. Sur Gradius IV, le texte s'affiche et
-    le logiciel égale le GPU. Le jeu lui-même n'a pas été atteint : il reste dans
-    ses menus de réglage de l'horloge.
-  - L'attente de la relecture (Taito JC, Gaelco 3D, HNG64, System 21) se fait
-    maintenant quand le rendu lit l'image : `render_texture::get_scaled` appelle
-    `hires3d_output::complete_reads()`, après la régulation de vitesse. Sur Speed
-    Up ×4 en fenêtre : 1,4 s d'attente sur 40 s au lieu de 6,9 s, mêmes images.
-  - System 22 : `end_frame` attendait le GPU à chaque image, ce qui prenait 35 %
-    du thread principal sur Ridge Racer. Il garde maintenant deux images en vol,
-    avec une barrière en tête de chaque image, et attend via `use_frame`. Sans
-    régulation en ×2, Ridge Racer passe de 341 % à 407 % et Dirt Dash de 263 % à
-    286 %. En fenêtre en ×4, Dirt Dash tient 98,8 % au lieu de 95,4 %. Images
-    identiques à l'ancien chemin.
-  - HNG64, horodatages GPU, xrally ×2, par image : 1,75 ms pour envoyer la 2D
-    (1,8 Mo), 0,76 ms pour dessiner et mélanger, 2,17 ms pour relire l'image
-    (3,7 Mo). L'attente vient donc des transferts PCIe, pas du dessin.
-    L'émulation elle-même reste sous la vitesse réelle en course sur ce
-    portable : 56 % sur GPU et 49 % en logiciel ×2.
-  - Cruis'n Exotica : après une sauvegarde en pleine course et un rechargement
-    300 images plus tard, les images sont identiques au pixel près à la course
-    de référence (décalées de 300 images). L'écran de calibration du premier
-    essai venait d'une sauvegarde faite avant la calibration. Les 534 423
-    lectures du tampon image par le CPU ont toutes lieu au démarrage, aucune en
-    course.
-  - Géométrie, profil du thread principal : sur crusnexo, Zeus 2 traite ses
-    modèles en 12 % environ, contre 58 % pour le TMS320C31 émulé. Sur ridgerac,
-    System 22 dessine sa scène en 9 % environ. HNG64 n'apparaît pas. Passer la
-    géométrie sur le GPU rapporterait peu : l'étape est retirée.
-  - Autres puces, d'après une lecture du code (rien n'a été testé) :
-    - Banshee et Voodoo 3 : seul candidat faisable avec des jeux de course qui
-      marchent (sf2049, sf2049se, cartfury).
-    - En attente de leur émulation : System 23, Type Zero (batlgear), Cobra
+    The gain depends on the raster's share of the total cost: sidebs and
+    roadedge spend most of their time in the emulated CPUs and the 2D.
+    Wall-clock time varies too much from one run to the next to conclude:
+    sidebs ×4 took 77 s then 101 s with the same executable.
+  - Automated games (coins, Start, accelerator, same inputs on the same
+    frames) on the full `mame.exe`, software versus GPU, 10 to 15 captures
+    per game, pixels above 24, worst capture: speedup 0.00%, crusnexo 0.01%,
+    xrally 0.03%, roadedge 0.04%, sidebs 0.07%, driveyes 0.40%, winrun
+    0.46%. Real races on all of them, except xrally (pre-race 3D screens).
+    25 s run in a bgfx window: sidebs, winrun and crusnusa at 100% speed,
+    no errors.
+- 2026-11-07 (continued): **windowed checks, GPU waits, Hornet**.
+  - Captures of the image actually displayed by bgfx (`PrintWindow`): Speed
+    Up, Roads Edge and Cruis'n Exotica at ×2, Winning Run and Side by Side at
+    ×4, 3D and 2D correct. The big digit at the Roads Edge start (a 2D sprite
+    with its black shadow) is the same in software. The earlier windowed run
+    covered crusnusa, a V-Unit that had not changed.
+  - Hornet: the K037122 layer was missing in HD (text, HUD). It is now scaled
+    up as on nwk-tr. On Gradius IV, the text shows and software matches the
+    GPU. The game itself was not reached: it stays in its clock setup menus.
+  - The read-back wait (Taito JC, Gaelco 3D, HNG64, System 21) now happens
+    when the renderer reads the image: `render_texture::get_scaled` calls
+    `hires3d_output::complete_reads()`, after speed throttling. On Speed Up ×4
+    windowed: 1.4 s of waiting over 40 s instead of 6.9 s, same images.
+  - System 22: `end_frame` waited for the GPU on every frame, which took 35%
+    of the main thread on Ridge Racer. It now keeps two frames in flight, with
+    a barrier at the head of each frame, and waits via `use_frame`. Unthrottled
+    at ×2, Ridge Racer goes from 341% to 407% and Dirt Dash from 263% to 286%.
+    Windowed at ×4, Dirt Dash holds 98.8% instead of 95.4%. Images identical
+    to the old path.
+  - HNG64, GPU timestamps, xrally ×2, per frame: 1.75 ms to upload the 2D
+    (1.8 MB), 0.76 ms to draw and blend, 2.17 ms to read back the image
+    (3.7 MB). So the wait comes from PCIe transfers, not from drawing.
+    The emulation itself stays below real speed in races on this laptop: 56%
+    on GPU and 49% in software ×2.
+  - Cruis'n Exotica: after a save mid-race and a load 300 frames later, the
+    images are pixel-identical to the reference race (shifted by 300 frames).
+    The calibration screen of the first run came from a save made before
+    calibration. The 534,423 CPU reads of the frame buffer all happen at
+    startup, none during the race.
+  - Geometry, main thread profile: on crusnexo, Zeus 2 processes its models
+    in about 12%, against 58% for the emulated TMS320C31. On ridgerac, System
+    22 draws its scene in about 9%. HNG64 does not show up. Moving geometry to
+    the GPU would bring little: the step is dropped.
+  - Other chips, from a code read (nothing was tested):
+    - Banshee and Voodoo 3: the only feasible candidate with racing games that
+      work (sf2049, sf2049se, cartfury).
+    - Waiting for their emulation: System 23, Type Zero (batlgear), Cobra
       (racjamdx), Quicksilver II.
-    - GPU PS1 (technodr, kartduel, glpracr…) : sommets entiers, donc une HD sans
-      sous-pixel, pour un gros travail.
-    - Zeus 1 et Konami M2 : faisables, mais sans jeu de course.
-    - Hard Drivin' et Polygonet : la 3D est calculée par le CPU ou le DSP émulé,
-      impossible sans HLE.
-- 2026-11-07 (soir) : **Banshee et Voodoo 3 en HD, image partagée avec bgfx**.
-  - Banshee/Voodoo 3 : tampons couleur et profondeur n'importe où dans la
-    mémoire partagée avec les textures, à des adresses que le jeu change. Les
-    copies HD (logiciel et Vulkan) sont tenues par adresse de tampon, et toute
-    écriture dans la mémoire (FIFO, écritures directes et LFB, port de
-    textures, blits 2D) va aux copies qu'elle touche et à la mémoire de
-    textures du GPU ; CLUT de 512 entrées. sf2049 et cartfury tournent en
-    double tampon à deux adresses, sans blit.
-  - Les lectures des registres de statistiques de pixels relancent le
-    rastériseur natif (seul lui compte les pixels qui passent les tests) :
-    sf2049 les lit toutes les 5 images, et sa démo divergeait quand seul le GPU
-    dessinait. Elle suit maintenant le logiciel ; racingj aussi les lit, et
-    dessine donc en natif en plus du GPU.
-  - Voodoo 1/2 : les écritures LFB avec pipeline n'étaient recopiées en HD que
-    si elles changeaient le pixel natif ; en mode GPU seul, l'écran de test du
-    volant de sfrush était noir. Corrigé. La démo de sfrush diverge toujours
-    en mode GPU seul (temps d'exécution estimé), comme avant.
-  - Partage avec bgfx : sur ce portable, 16 essais sur 16 sans erreur en
-    fenêtre (8 jeux, 2 fois). En ×4 en fenêtre, vitesse régulée, avec partage
-    puis sans : roadedge 88,8 % contre 64,5 % ; ridgerac 100 % contre 98,3 % ;
-    attente du GPU sur 29 s : sf2049 0,07 s contre 6,0 s, sidebs 0,19 s contre
-    0,82 s, speedup 0,09 s contre 0,94 s, winrun 0,02 s contre 0,71 s.
-  - Pièges trouvés en route : bgfx rend sur son propre thread sous Windows
-    (`BGFX_CONFIG_MULTITHREADED` n'est à 0 que sur macOS) avec un périphérique
-    D3D11 mono-thread. Tant que bgfx gardait ce thread, les appels D3D11 depuis
-    l'émulation faisaient planter le pilote, les requêtes ne finissaient pas, et
-    un keyed mutex donnait une image noire (le dessin avait lieu après la
-    libération du verrou).
-- 2026-11-07 (nuit) : **options d'affichage et hack 16:9**.
-  - `-aspect_ratio` et `-crop_position`, avec les mêmes valeurs que les autres
-    émulateurs des bornes (voir le point 8 de l'architecture). Vérifié dans
-    une fenêtre de 640x480 : en 16:9, cadre de 640x360 avec l'image 4:3
-    entre deux bandes ; `_stretch` remplit, `_crop` couvre, et
-    `-crop_position -100` garde le haut. Le rendu GPU suit la taille de la
-    fenêtre comme le rendu logiciel : bgfx étire la texture de l'image.
-  - `-widescreen` (rendu Vulkan, aussi en `-hires3d 1`), pour les puces dont
-    MAME fait la projection :
-    - System 22 : les polygones projetés sont décalés de `pad`, et les
-      fenêtres 3D qui touchent un bord de l'écran vont jusqu'au bord de
-      l'image ; les sprites, les polygones directs et la couche texte restent
-      au milieu ou sont étirés. ridgerac : la piste continue sur les côtés,
-      sans couture, et le point de fuite ne bouge pas.
-    - HNG64 : tampons 3D plus larges de `pad` de chaque côté, frustum élargi
-      d'autant (x divisé avant le clip puis remultiplié), mélange avec les
-      couches du dessus au milieu ou étirées. `-widescreen_bg` dessine aussi
-      les tilemaps sous la 3D au-delà des bords de l'écran (bitmaps avec
-      marge), pas les sprites. Le ciel de roadedge continue sans couture ;
-      la course de xrally s'élargit aussi.
-    - Zeus 2 : chaque ligne de l'image du tampon a `pad` colonnes de plus de
-      chaque côté ; les polygones dont le clip touche un bord de l'écran
-      continuent, et les remplissages de lignes entières effacent aussi les
-      côtés. Le Zeus 2 dessine sa 2D en polygones : le HUD reste au milieu,
-      `-widescreen_2d stretch` n'y change rien. crusnexo : la 3D s'élargit,
-      le menu et le tableau de bord restent au milieu avec du noir autour.
-  - Limites propres au hack : ce que le jeu met hors de l'écran devient
-    visible (un panneau 3D au bord de l'écran de choix de roadedge, la ville
-    3D derrière l'intro 2D de xrally) ; une tilemap qui ne déborde pas laisse
-    du noir ; avec `-widescreen_bg` et `-widescreen_2d stretch`, les couches
-    2D sous la 3D ne sont pas étirées et se décalent de celles du dessus sur
-    les écrans de menus.
-  - Corrigé le 2026-11-09. HNG64 : quand les tilemaps sous la 3D ne dépassent
-    pas de l'écran 4:3 (menus), ces couches sont étirées avec le reste en mode
-    `stretch`, et les côtés restent noirs sinon, sans 3D ni tilemap. Le test
-    regarde les côtés dans tous les modes `-widescreen` ; la course ne change
-    pas. La bande de roadedge était une tilemap, pas de la 3D. Zeus 2 : en mode
-    `stretch`, les polygones sans test de profondeur ou plats devant la scène
-    (z constant sous 12,5) sont étirés : menus et textes de crusnexo. Le HUD
-    d'une vraie course n'a pas été vu (démo seulement). Essai rejeté : les
-    sprites HNG64 prolongés sur les côtés dupliquent les menus.
-  - Le crash à la sortie en fenêtre venait de `view_widening()`, appelé
-    pendant la destruction de la fenêtre alors que les périphériques étaient
-    déjà arrêtés : les écrans arrêtés sont ignorés.
-  - Vu en route : le rendu logiciel du HNG64 en ×3 (taille de tampon qui
-    n'est pas une puissance de 2) masque ses coordonnées avec `taille - 1`
-    et montre des bandes répétées ; le chemin GPU passe maintenant par un
-    modulo et est correct en ×3. Le chemin logiciel n'est pas corrigé.
+    - PS1 GPU (technodr, kartduel, glpracr…): integer vertices, so HD without
+      sub-pixel precision, for a lot of work.
+    - Zeus 1 and Konami M2: feasible, but no racing game.
+    - Hard Drivin' and Polygonet: the 3D is computed by the emulated CPU or
+      DSP, impossible without HLE.
+- 2026-11-07 (evening): **Banshee and Voodoo 3 in HD, image shared with
+  bgfx**.
+  - Banshee/Voodoo 3: colour and depth buffers anywhere in the memory shared
+    with textures, at addresses the game changes. The HD copies (software and
+    Vulkan) are kept per buffer address, and every write to memory (FIFO,
+    direct and LFB writes, texture port, 2D blits) goes to the copies it
+    touches and to the GPU texture memory; 512-entry CLUT. sf2049 and cartfury
+    run double-buffered at two addresses, without blits.
+  - Reads of the pixel statistics registers restart the native rasterizer
+    (only it counts the pixels that pass the tests): sf2049 reads them every
+    5 frames, and its demo diverged when only the GPU was drawing. It now
+    follows the software path; racingj also reads them, and so draws native
+    in addition to the GPU.
+  - Voodoo 1/2: pipelined LFB writes were only copied to HD if they changed
+    the native pixel; in GPU-only mode, the sfrush wheel test screen was
+    black. Fixed. The sfrush demo still diverges in GPU-only mode (estimated
+    execution time), as before.
+  - Sharing with bgfx: on this laptop, 16 runs out of 16 without errors in a
+    window (8 games, twice). At ×4 windowed, throttled, with sharing then
+    without: roadedge 88.8% versus 64.5%; ridgerac 100% versus 98.3%; GPU wait
+    over 29 s: sf2049 0.07 s versus 6.0 s, sidebs 0.19 s versus 0.82 s,
+    speedup 0.09 s versus 0.94 s, winrun 0.02 s versus 0.71 s.
+  - Pitfalls found along the way: bgfx renders on its own thread on Windows
+    (`BGFX_CONFIG_MULTITHREADED` is 0 only on macOS) with a single-threaded
+    D3D11 device. As long as bgfx kept that thread, D3D11 calls from the
+    emulation crashed the driver, queries never finished, and a keyed mutex
+    gave a black image (drawing happened after the lock was released).
+- 2026-11-07 (night): **display options and 16:9 hack**.
+  - `-aspect_ratio` and `-crop_position`, with the same values as the other
+    emulators on the cabinets (see item 8 of the architecture). Checked in a
+    640x480 window: in 16:9, a 640x360 frame with the 4:3 image between two
+    bars; `_stretch` fills, `_crop` covers, and `-crop_position -100` keeps
+    the top. GPU rendering follows the window size like software rendering:
+    bgfx stretches the image texture.
+  - `-widescreen` (Vulkan renderer, also with `-hires3d 1`), for the chips
+    where MAME does the projection:
+    - System 22: projected polygons are shifted by `pad`, and 3D windows that
+      touch a screen edge extend to the edge of the image; sprites, direct
+      polygons and the text layer stay in the middle or are stretched.
+      ridgerac: the track continues on the sides, without a seam, and the
+      vanishing point does not move.
+    - HNG64: 3D buffers wider by `pad` on each side, frustum widened by the
+      same amount (x divided before the clip then multiplied back), blending
+      with the layers on top in the middle or stretched. `-widescreen_bg` also
+      draws the tilemaps under the 3D beyond the screen edges (bitmaps with a
+      margin), not the sprites. The roadedge sky continues without a seam;
+      the xrally race widens too.
+    - Zeus 2: each line of the buffer image has `pad` extra columns on each
+      side; polygons whose clip touches a screen edge continue, and full-line
+      fills also clear the sides. Zeus 2 draws its 2D as polygons: the HUD
+      stays in the middle, `-widescreen_2d stretch` changes nothing there.
+      crusnexo: the 3D widens, the menu and the dashboard stay in the middle
+      with black around.
+  - Limits specific to the hack: what the game puts off screen becomes
+    visible (a 3D panel at the edge of the roadedge selection screen, the 3D
+    city behind the xrally 2D intro); a tilemap that does not overflow leaves
+    black; with `-widescreen_bg` and `-widescreen_2d stretch`, the 2D layers
+    under the 3D are not stretched and shift relative to the ones on top on
+    the menu screens.
+  - Fixed on 2026-11-09. HNG64: when the tilemaps under the 3D do not extend
+    beyond the 4:3 screen (menus), those layers are stretched with the rest in
+    `stretch` mode, and the sides stay black otherwise, with no 3D or tilemap.
+    The test looks at the sides in all `-widescreen` modes; the race does not
+    change. The roadedge bar was a tilemap, not 3D. Zeus 2: in `stretch`
+    mode, polygons with no depth test or flat in front of the scene (constant
+    z below 12.5) are stretched: crusnexo menus and texts. The HUD of a real
+    race was not seen (demo only). Rejected attempt: HNG64 sprites extended
+    on the sides duplicate the menus.
+  - The crash on exit in a window came from `view_widening()`, called during
+    window destruction while the devices were already stopped: stopped
+    screens are ignored.
+  - Seen along the way: HNG64 software rendering at ×3 (buffer size that is
+    not a power of 2) masks its coordinates with `size - 1` and shows
+    repeated bands; the GPU path now uses a modulo and is correct at ×3. The
+    software path is not fixed.
 
-## Bilan du 2026-11-10 : rendu GPU étendu et essais complets
+## Summary, 2026-11-10: extended GPU rendering and full runs
 
-Mandat : tous les points de la liste sauf 1, 4, 8, 9, puis essais de tous les
-jeux en ×1 à ×4, avec et sans `-widescreen`. Pas de push, pas de release.
+Brief: all items on the list except 1, 4, 8, 9, then runs of all games at ×1
+to ×4, with and without `-widescreen`. No push, no release.
 
-- **Model 1** (bf63fc36f50) : partage bgfx et 16:9.
-- **System 23** (84f118c06f9) : rendu Vulkan (`namcos23_vk`), hors Gorgon. Race
-  On! : course complète en ×2 (65 % de la vitesse, limité par le CPU émulé).
-- **PlayStation** (ce5c31da416) : `psxgpu_vk`. Le rendu logiciel continue sur la
-  VRAM native (textures, lectures du jeu) ; les primitives sont redessinées
-  dans une copie de la VRAM à haute résolution, et la zone affichée en est
-  tirée. Le GPU rejette comme le matériel les triangles de plus de 1023
-  pixels (sinon blocs colorés en bas à gauche dans kartduel). 15 bits
-  seulement : le mode 24 bits et l'écran éteint restent en natif. Pas de 16:9
-  (projection faite par le jeu).
-- **Viper et Thrill Drive** : thrild2, xtrial (Viper) et thrilld (Hornet)
-  démarrent et jouent leur démo sans modification, malgré « not working ».
-  thrilld, racingj et racingj2 demandent d'initialiser leur mémoire (bouton Test).
-- **Point 3** : en course sur le GPU : roadburn ×3, windheat ×2, racingj ×2,
-  racingj2 ×2, calspeed ×2. Le rectangle gris de Racing Jam (rétroviseur,
-  aperçu de voiture) existe aussi en natif et en logiciel.
+- **Model 1** (bf63fc36f50): bgfx sharing and 16:9.
+- **System 23** (84f118c06f9): Vulkan renderer (`namcos23_vk`), except
+  Gorgon. Race On!: full race at ×2 (65% speed, limited by the emulated CPU).
+- **PlayStation** (ce5c31da416): `psxgpu_vk`. Software rendering continues on
+  the native VRAM (textures, game reads); primitives are redrawn into a
+  high-resolution copy of the VRAM, and the displayed area is taken from it.
+  The GPU rejects triangles larger than 1023 pixels like the hardware
+  (otherwise coloured blocks at the bottom left in kartduel). 15-bit only:
+  24-bit mode and the blanked screen stay native. No 16:9 (projection done
+  by the game).
+- **Viper and Thrill Drive**: thrild2, xtrial (Viper) and thrilld (Hornet)
+  boot and play their demo without changes, despite "not working". thrilld,
+  racingj and racingj2 require their memory to be initialised (Test button).
+- **Item 3**: racing on the GPU: roadburn ×3, windheat ×2, racingj ×2,
+  racingj2 ×2, calspeed ×2. The grey rectangle in Racing Jam (rear-view
+  mirror, car preview) also exists in native and in software.
 
-### Matrice
+### Matrix
 
-40 jeux, ×1 à ×4, avec et sans `-widescreen` : 320 essais, tous avec le code
-de sortie 0, sans `-video` (image relue du GPU), 60 à 230 s émulées, images
-comparées d'une configuration à l'autre (dernière capture de chaque essai).
-Jeux joués par script (130 s) car bloqués à 60 s sur calibrage ou démarrage :
-crusnexo, crusnusa, hangplt, raceon, motoxgo, kartduel ; sf2049 et sf2049se
-vont plus loin sur 130 s sans script. Les jeux à disque dur (CHD) ne peuvent
-pas tourner à plusieurs instances : un par un.
+40 games, ×1 to ×4, with and without `-widescreen`: 320 runs, all with exit
+code 0, without `-video` (image read back from the GPU), 60 to 230 emulated
+seconds, images compared from one configuration to another (last capture of
+each run). Games played by script (130 s) because they were stuck at 60 s on
+calibration or startup: crusnexo, crusnusa, hangplt, raceon, motoxgo,
+kartduel; sf2049 and sf2049se get further in 130 s without a script.
+Hard-disk games (CHD) cannot run as several instances: one at a time.
 
-- Pas essayés : netmerc et wingwar, ROM `hd44780` absente du NAS.
-- gticlub : erreur de volant (point 4, exclu) ; essayé jusqu'au menu de test
-  seulement, sa 3D n'est pas vue dans la matrice.
-- 500gp : écran noir persistant en fin d'essai en ×2 et ×3, seulement avec plus
-  de 5 instances en même temps sur le GPU de ce portable (3 essais sur 8 de la
-  première passe, puis ×2 dans une passe chargée). Jamais vu seul ni sur la
-  moitié des passes à 5 instances. Hypothèse non vérifiée : soumission Vulkan
-  qui échoue (`end_frame` rend false sans rien dire, le bitmap natif n'est pas
-  dessiné). Une seule instance tourne sur une borne.
-- Le 16:9 du menu de raceon laisse des côtés noirs en haut et en bas (décor 2D).
+- Not tried: netmerc and wingwar, `hd44780` ROM missing from the NAS.
+- gticlub: wheel error (item 4, excluded); tried up to the test menu only,
+  its 3D is not seen in the matrix.
+- 500gp: persistent black screen at the end of the run at ×2 and ×3, only
+  with more than 5 instances at the same time on this laptop's GPU (3 runs out
+  of 8 in the first pass, then ×2 in a loaded pass). Never seen alone or on
+  half of the 5-instance passes. Unverified hypothesis: a failing Vulkan
+  submit (`end_frame` returns false silently, the native bitmap is not
+  drawn). Only one instance runs on a cabinet.
+- The 16:9 of the raceon menu leaves black sides at the top and bottom (2D
+  background).
 
-### En fenêtre bgfx
+### In a bgfx window
 
-Partage sans relecture CPU, vu sur l'écran réel (60 captures du bureau de
-suite, aucune noire) : vr ×1 et ×2, vr ×2 16:9, raceon ×2 et ×2 16:9,
-pocketrc ×3. Le `PrintWindow` de `wincap.ps1` donne des images noires sur
-ces jeux : défaut de la capture, pas de l'affichage.
+Sharing without CPU read-back, seen on the real screen (60 consecutive
+desktop captures, none black): vr ×1 and ×2, vr ×2 16:9, raceon ×2 and ×2
+16:9, pocketrc ×3. The `PrintWindow` in `wincap.ps1` gives black images on
+these games: a capture defect, not a display one.
 
-### Suite du 2026-11-10 : volant, repli logiciel, rétroviseurs
+### Continued, 2026-11-10: steering wheel, software fallback, rear-view mirrors
 
-- **GTI Club** : « DEVICE ERROR (STEERING WHEEL) » venait du contrôle au
-  démarrage, à l'adresse ff80fc0c : couple croissant d'un côté (0x91 à 0x9f),
-  de l'autre (0x81 à 0x8f), puis de nouveau le premier côté. Le volant doit
-  bouger de 0x60 à un couple donné, aller de butée à butée et être centré. Un
-  petit modèle dans `gticlub.cpp` donne la position lue pendant ce contrôle,
-  du premier 0x91 à l'arrêt du moteur (0x00) ; ensuite le port du volant
-  reprend la main, sur les bornes aussi. thunderh et slrasslt ne sont pas
-  concernés. La démo 3D est vue de ×1 à ×4, avec et sans `-widescreen`.
-- **Repli logiciel** : System 23, PS1 et Voodoo restaient noirs ou muets si le
-  GPU échouait. Ils passent en natif avec un message. Essayé en provoquant la
-  panne (submit qui échoue après 400 appels, patch temporaire non commité) :
-  500gp, pocketrc, vr, ridgerac, sfrush, sidebs, roadedge, speedup, crusnusa,
-  winrun, gticlub2 reviennent à l'image. Le moteur `-video none` n'a pas pu
-  reproduire l'écran noir de 500gp vu sous forte charge : sa cause reste
-  supposée.
-- **Thrill Drive 2 et Xtrial Racing** : le jeu change de largeur de tampon à
-  chaque image pour son rétroviseur, ce qui détruisait les images GPU
-  (`hires_layout`) : le titre restait affiché pendant la course. Une cible
-  plus étroite garde maintenant les images. Elle est aussi dessinée par le
-  rasteriseur natif, car le rétroviseur est relu comme texture depuis la
-  mémoire native (`tmu_written` au retour à la largeur normale). Courses
-  complètes sur GPU : thrilld, thrild2, xtrial, de ×1 à ×4.
-- **Motocross Go!** : les pneus ont bien la couleur du sol sur une vraie borne
-  (vidéo vue par le propriétaire). Aucun défaut.
-- Vérification finale, Voodoo et Hang Pilot, 96 essais : thrild2, xtrial,
-  thrilld, gticlub2, sf2049se, sfrush, calspeed, cartfury, roadburn, racingj,
-  racingj2, hangplt, ×1 à ×4, avec et sans `-widescreen`, sans erreur.
+- **GTI Club**: "DEVICE ERROR (STEERING WHEEL)" came from the startup check,
+  at address ff80fc0c: increasing torque to one side (0x91 to 0x9f), to the
+  other (0x81 to 0x8f), then to the first side again. The wheel must move
+  from 0x60 at a given torque, go from end stop to end stop and be centred. A
+  small model in `gticlub.cpp` gives the position read during this check,
+  from the first 0x91 to the motor stop (0x00); after that the wheel port
+  takes over, on the cabinets too. thunderh and slrasslt are not affected.
+  The 3D demo is seen from ×1 to ×4, with and without `-widescreen`.
+- **Software fallback**: System 23, PS1 and Voodoo stayed black or silent if
+  the GPU failed. They switch to native with a message. Tested by forcing the
+  failure (submit that fails after 400 calls, temporary uncommitted patch):
+  500gp, pocketrc, vr, ridgerac, sfrush, sidebs, roadedge, speedup,
+  crusnusa, winrun, gticlub2 get their image back. The `-video none` engine
+  could not reproduce the 500gp black screen seen under heavy load: its cause
+  remains a guess.
+- **Thrill Drive 2 and Xtrial Racing**: the game changes buffer width every
+  frame for its rear-view mirror, which destroyed the GPU images
+  (`hires_layout`): the title stayed on screen during the race. A narrower
+  target now keeps the images. It is also drawn by the native rasterizer,
+  because the mirror is read back as a texture from native memory
+  (`tmu_written` on return to the normal width). Full races on GPU: thrilld,
+  thrild2, xtrial, from ×1 to ×4.
+- **Motocross Go!**: the tyres really do have the ground colour on a real
+  cabinet (video seen by the owner). No defect.
+- Final check, Voodoo and Hang Pilot, 96 runs: thrild2, xtrial, thrilld,
+  gticlub2, sf2049se, sfrush, calspeed, cartfury, roadburn, racingj,
+  racingj2, hangplt, ×1 to ×4, with and without `-widescreen`, no errors.
 
-### Suite du 2026-11-11 : menu vidéo, image noire de Thrill Drive 2
+### Continued, 2026-11-11: video menu, Thrill Drive 2 black frame
 
-- **Menu** : « Video Options » (réglages généraux et par jeu) a une section
-  « High Resolution 3D Options » : `-hires3d`, `-hires3d_renderer`,
+- **Menu**: "Video Options" (general and per-game settings) has a "High
+  Resolution 3D Options" section: `-hires3d`, `-hires3d_renderer`,
   `-bgfx_hires3d_share`, `-aspect_ratio`, `-crop_position`, `-widescreen`,
-  `-widescreen_2d`, `-widescreen_bg`. Pris en compte au lancement suivant,
-  pas à la volée (choix du propriétaire).
-- **Thrill Drive 2, Xtrial Racing** : une image sur deux du jeu sortait noire
-  avec Vulkan en ×2 à ×4 (le propriétaire voyait l'image clignoter). Le
-  rétroviseur, dessiné en natif sur la cible étroite, prenait quand même une
-  des trois copies haute résolution des tampons de couleur et chassait celle
-  d'un tampon à afficher ; ce tampon était alors montré depuis sa version
-  native, vide quand seul le GPU dessine. La cible étroite ne passe plus par
-  la copie haute résolution avec Vulkan. Les essais précédents (une capture
-  toutes les 300 images) tombaient toujours sur une bonne image : vérifié
-  cette fois image par image, en course, thrild2 ×2 à ×4, xtrial ×3 et ×4,
-  écarts entre images égaux au natif ; gticlub2 et sf2049se inchangés.
+  `-widescreen_2d`, `-widescreen_bg`. Applied at the next launch, not on the
+  fly (owner's choice).
+- **Thrill Drive 2, Xtrial Racing**: every other game frame came out black
+  with Vulkan at ×2 to ×4 (the owner saw the image flicker). The rear-view
+  mirror, drawn native on the narrow target, still took one of the three
+  high-resolution copies of the colour buffers and evicted the one of a
+  buffer to be displayed; that buffer was then shown from its native version,
+  empty when only the GPU draws. The narrow target no longer goes through the
+  high-resolution copy with Vulkan. The earlier runs (one capture every 300
+  frames) always landed on a good frame: checked this time frame by frame,
+  in a race, thrild2 ×2 to ×4, xtrial ×3 and ×4, frame-to-frame differences
+  equal to native; gticlub2 and sf2049se unchanged.
 
-### Suite du 2026-11-11 : fusion upstream, annonce UDP, chasse au clignotement
+### Continued, 2026-11-11: upstream merge, UDP announce, flicker hunt
 
-- **Fusion** de MAME upstream (59 commits, 754eb0adb02). Seul conflit : le
-  compteur MIPS, qu'upstream a corrigé comme nous (adb51e24801) ; les
-  fichiers mips3 sont repris d'upstream. Deux nouveaux `.lay` demandaient
-  de régénérer le projet (`make vs2022`) avant la compilation.
-- **Sorties réseau** (208804e82b9) : au lancement d'un jeu, `-output network`
-  envoie en broadcast UDP sur le port 8001 `mame_start = <jeu>\r` puis
-  `tcp = 8000\r`, comme Supermodel njz3. BackForceFeeder et le FFB Plugin
-  njz3 écoutent ce port, maintenant tous deux en partagé (SO_REUSEADDR).
-  Vu avec un récepteur pour vr et ridgerac ; rien sans `-output network`.
-  Le serveur TCP 8000 accepte plusieurs clients à la fois.
-- **Chasse au clignotement**, sur le build fusionné : 40 jeux, natif puis
-  Vulkan ×2, ×3, ×4 et ×2 `-widescreen`, une capture par image dans deux
-  fenêtres de 40 images (démo, puis partie avec pièce, Start et
-  accélérateur), chaque image comparée à l'image native de même numéro, et
-  les images noires comptées. Le banc retrouve les 21 images noires de
-  thrild2 avec l'exe d'avant le correctif. Résultat : aucune image noire,
-  aucun pic. Les écarts restants ne sont pas des défauts d'image :
-  - sfrush : la dernière capture, prise à la sortie de `-seconds_to_run`
-    (reste d'image native, déjà connu) ;
-  - raceon : l'image Vulkan est décalée d'une image entière, régulièrement,
-    selon la fenêtre (rythme de l'émulation, pas vérifié plus loin) ;
-  - roadburn, xtrial, calspeed : la course part autrement qu'en natif
-    (place, classement), le chrono égal ; images justes, rétroviseurs
-    compris. Sans doute le nombre de pixels estimé quand seul le GPU
-    dessine, relu par le jeu (pas vérifié) ;
-  - pocketrc : scène immobile, seule la netteté en ×4 diffère.
-  Limites : 80 images par essai, toujours la même conduite ; seulement la
-  carte NVIDIA de ce PC.
+- **Merge** of upstream MAME (59 commits, 754eb0adb02). Only conflict: the
+  MIPS counter, which upstream fixed the same way we did (adb51e24801); the
+  mips3 files are taken from upstream. Two new `.lay` files required
+  regenerating the project (`make vs2022`) before compiling.
+- **Network outputs** (208804e82b9): when a game starts, `-output network`
+  sends a UDP broadcast on port 8001 `mame_start = <game>\r` then
+  `tcp = 8000\r`, like Supermodel njz3. BackForceFeeder and the njz3 FFB
+  Plugin listen on this port, now both in shared mode (SO_REUSEADDR). Seen
+  with a receiver for vr and ridgerac; nothing without `-output network`.
+  The TCP 8000 server accepts several clients at once.
+- **Flicker hunt**, on the merged build: 40 games, native then Vulkan ×2,
+  ×3, ×4 and ×2 `-widescreen`, one capture per frame in two 40-frame windows
+  (demo, then a game with coin, Start and accelerator), each frame compared
+  to the native frame with the same number, and black frames counted. The
+  bench finds the 21 black frames of thrild2 with the pre-fix exe. Result:
+  no black frames, no spikes. The remaining differences are not image
+  defects:
+  - sfrush: the last capture, taken on exit from `-seconds_to_run` (leftover
+    native image, already known);
+  - raceon: the Vulkan image is shifted by a whole frame, regularly,
+    depending on the window (emulation timing, not checked further);
+  - roadburn, xtrial, calspeed: the race starts differently from native
+    (position, ranking), same timer; images correct, rear-view mirrors
+    included. Probably the estimated pixel count when only the GPU draws,
+    read back by the game (not checked);
+  - pocketrc: still scene, only the sharpness at ×4 differs.
+  Limits: 80 frames per run, always the same driving; only this PC's NVIDIA
+  card.
 
-### Suite du 2026-11-12 : fusion upstream, cas bizarres du banc
+### Continued, 2026-11-12: upstream merge, odd bench cases
 
-- **Fusion** de MAME upstream (8 commits, 9a52a4806ab), sans conflit.
-  `diexec.h` change (`signal_external_write`) : presque tout recompile.
-- **Méthode** : en plus des captures, une empreinte de la RAM du CPU
-  principal (8 Mo, un mot sur seize, toutes les 10 images, mêmes entrées
-  que le banc) dit si l'émulation elle-même s'écarte du natif, et deux
-  lancements natifs disent si le jeu est reproductible.
-- **California Speed** : la course partait autrement en Vulkan. Cause :
-  quand seul le GPU dessine, le nombre de pixels d'un triangle (qui donne
-  la durée de l'opération vue par le jeu) était l'aire découpée par le
-  rectangle de clip ; le rasterizer natif (`POLY_FLAG_NO_CLIPPING`) compte
-  les étendues de chaque ligne sans découpe. `estimated_pixels` refait
-  maintenant exactement son calcul, et le remplissage rapide suit
-  `render_tile`. Après correction, RAM identique au natif en ×2 et ×4 sur
-  toute la partie.
-- **Road Burners, Xtrial Racing** : deux lancements natifs diffèrent déjà
-  (roadburn dès l'image 430, au démarrage). Les horloges M48T37 (Vegas)
-  et M48T58 (Viper) lisent l'heure du PC ; ce n'est pas mame3d.
-- **Race On!** : RAM identique au natif en ×2 et ×4 ; l'image ×4 est
-  parfois en retard d'une image (pas à chaque lancement), l'affichage
-  seulement. Cause non trouvée (le rendu Vulkan du System 23 relit son
-  image tout de suite).
-- **Pocket Racer** : natif reproductible, logiciel identique, Vulkan ne
-  diffère que par la netteté.
+- **Merge** of upstream MAME (8 commits, 9a52a4806ab), no conflicts.
+  `diexec.h` changes (`signal_external_write`): almost everything recompiles.
+- **Method**: in addition to the captures, a fingerprint of the main CPU RAM
+  (8 MB, one word in sixteen, every 10 frames, same inputs as the bench)
+  tells whether the emulation itself deviates from native, and two native
+  launches tell whether the game is reproducible.
+- **California Speed**: the race started differently on Vulkan. Cause: when
+  only the GPU draws, the pixel count of a triangle (which gives the
+  duration of the operation as seen by the game) was the area clipped by the
+  clip rectangle; the native rasterizer (`POLY_FLAG_NO_CLIPPING`) counts the
+  extents of each line without clipping. `estimated_pixels` now redoes its
+  calculation exactly, and the fast fill follows `render_tile`. After the
+  fix, RAM identical to native at ×2 and ×4 over the whole game.
+- **Road Burners, Xtrial Racing**: two native launches already differ
+  (roadburn from frame 430, at startup). The M48T37 (Vegas) and M48T58
+  (Viper) clocks read the PC time; this is not mame3d.
+- **Race On!**: RAM identical to native at ×2 and ×4; the ×4 image is
+  sometimes one frame late (not on every launch), display only. Cause not
+  found (the System 23 Vulkan renderer reads back its image right away).
+- **Pocket Racer**: native reproducible, software identical, Vulkan differs
+  only in sharpness.
 
-### Suite du 2026-11-12 (soir) : Thrill Drive 2 en 16:9, Race On!
+### Continued, 2026-11-12 (evening): Thrill Drive 2 in 16:9, Race On!
 
-- **Thrill Drive 2, `-widescreen`** (viper.cpp, toutes les versions) : le jeu
-  projette lui-même sa 3D, le hack passe donc par son code. La structure
-  caméra (viewport 512x384, near 0,2, far 280, FOV 50°, tanH 1,1918, tanV
-  0,8938 en 0x5729a0) est remplie une fois par une fonction (0x040b40 dans
-  les quatre versions) : `tan(fov)`, tanH en +0x34/+0x38, tanV = tanH × forme
-  en +0x3c, puis le frustum (gauche, droite, haut, bas) passé à la fonction
-  qui construit les plans de découpe. Le driver cherche cette fin de fonction
-  par signature, y met un saut vers 12 instructions écrites en 0x3600 (RAM vide
-  entre les vecteurs et le programme) qui multiplient tanH et la droite du
-  frustum par 4/3 sans toucher au haut ni à tanV : projection et culling
-  s'élargissent ensemble. L'écran garde sa taille et est montré étiré en 16:9
-  (`hires3d_output::allow_anamorphic`). Toutes les caméras sont élargies, le
-  rétroviseur garde donc sa forme ; textes et compteurs sont étirés.
-  - Essais : modifier tanH à chaud élargit la vue (le frustum seul n'a aucun
-    effet, l'angle non plus). Les watchpoints du débogueur ne voient rien :
-    la RAM est en fastram DRC. Code hors RAM de travail (0x02000000,
-    0xfe100000) : le jeu reste sur son écran bleu de démarrage (cause non
-    cherchée ; peut-être la traduction d'adresses du PowerPC).
-  - Vérifié : thrild2, thrild2j, thrild2a, thrild2c patchés à la même
-    adresse, course correcte sans `-hires3d` et en Vulkan ×2 et ×4 ; sans
-    `-widescreen`, image identique à avant au pixel près.
-- **Race On!, image en retard** (vk3d_context.cpp) : l'image Vulkan avait
-  une image de retard sur le natif, sur des fenêtres entières, selon le
-  lancement et plus souvent en ×3 et ×4. Les listes de rendu et les sommets
-  envoyés au GPU étaient identiques au natif image par image (empreintes),
-  l'image relue juste après la fence était celle d'avant, et redevenait juste
-  après `vkDeviceWaitIdle` (pas avec une invalidation seule, ni avec des
-  barrières complètes). Cause : `submit_and_wait()`, qui envoie les textures
-  au démarrage, laissait la fence du contexte signalée ; le rendu du System 23
-  envoie chaque image avec cette fence, la croit libre et l'attend puis la
-  remet à zéro. Envoyée signalée, chaque attente rendait la main tout de
-  suite, et la relecture prenait l'image précédente tant que le GPU restait
-  en retard sur le CPU. La fence est maintenant remise à zéro après
-  `submit_and_wait()` (les autres puces ont leurs propres fences, ou
-  remettent celle-ci à zéro avant d'envoyer). Après correction : ×2, ×3, ×4,
-  deux lancements, aucun décalage, ×3 identique au natif.
-- **Thrill Drive 1 en 16:9** (nwk-tr.cpp, `-widescreen`) : thrilld et ses
-  versions sont sur le pilote NWK-TR (pas Hornet : seuls les jeux thrilldg*
-  y sont, marqués non fonctionnels). Le PowerPC 403 n'a pas de FPU et ne
-  garde pas de flottants de caméra : en perturbant ~6500 flottants de sa
-  RAM et ~2750 du bloc 1 du DSP, rien. C'est le DSP SHARC qui projette.
-  - Trouvé en traçant les écritures du DSP vers la Voodoo (tap Lua sur
-    0x2400000-0x27fffff : fvertexAx..Cy en 0x2480022-27, ~460 triangles par
-    image), puis en remontant l'interpréteur de commandes du DSP (chaque
-    gestionnaire lit ses mots par `DM(I4, M1)` dans la mémoire partagée
-    0x400000 et saute au suivant par la table 0x28283).
-  - Commande 3 = viewport, 6 mots de 16 bits : centre (256, 192), demi-taille
-    (256, 192), focale horizontale puis verticale en pixels, négatives. Le
-    DSP en tire la projection (demi-largeur / |focale|) et les plans de
-    clipping (focale × 16). 7 viewports par image : le monde à −215
-    (256/215 = tan 50°, comme la tangente de Thrill Drive 2), le tableau de
-    bord 3D (aiguille du compte-tours, chiffres de vitesse) à −443, et une
-    lecture à +128 au même PC sans effet visible.
-  - Le patch : un tap de lecture sur la mémoire partagée des deux DSP ; quand
-    le DSP est au PC qui lit la focale horizontale (0x20130, retrouvé par
-    une signature de 8 instructions, vérifiée à chaque image, cherchée une
-    fois par seconde tant qu'elle n'y est pas), la valeur est divisée par
-    l'élargissement (4/3), sauf −443 (le tableau de bord reste comme la 2D,
-    étiré) et les valeurs positives. Image étirée en 16:9
-    (`allow_anamorphic`), comme Thrill Drive 2.
-  - Piège : un premier essai (écrire −332 dans la RAM du PowerPC en
-    0x3eb2d4) semblait élargir la vue à l'œil, mais les captures étaient
-    identiques au pixel : toujours comparer les pixels.
-  - Vérifié sur thrilld (seule version en local) : sans `-widescreen`, image
-    identique au pixel ; avec, identique au test Lua ; en fenêtre bgfx avec
-    `-hires3d 2`, image 16:9, voitures aux bonnes proportions. En vue
-    cockpit, le bas de l'habitacle, modélisé pour du 4:3, laisse voir la
-    route sur les bords. Seul le DSP 1 a le programme (le site n'est pas
-    trouvé sur le DSP 2).
-- **Thrill Drive 1, rétroviseur vide** (voodoo_render.cpp, voodoo.cpp,
-  voodoo_vk.cpp) : le cadre du rétro (en haut au centre) restait mauve uni,
-  avec ou sans `-widescreen`. Bug de la Voodoo de MAME, pas du 16:9.
-  - Fausse piste : la 2e carte vidéo (TWIN/SLAVE). Son DSP n'a jamais de
-    programme dans MAME, mais le PowerPC ne s'adresse qu'à la carte 0
-    (l'id 2 seulement au démarrage) ; en copiant les écritures vers la
-    carte 1, elle dessine la même image que la carte 0, le DSP n'ayant pas
-    d'identité à lui (pas de lecture de drapeau ou de cavalier).
-  - Le rétro est dessiné par la carte 0 : une commande viewport de plus,
-    centre (256, 344), demi-taille (128, 32), focales +128/−128 (positive en
-    horizontal : l'image est retournée), découpage x 128-384, y 312-376
-    avec l'origine Y en bas (fbzMode bit 17) ; un fast fill de la zone en
-    0xaab4ff (le mauve), puis ~60 triangles avec un test alpha et une
-    couleur clé.
-  - Cause : le fast fill compare le rectangle de découpage aux Y avant
-    retournement (il remplit la bonne zone), les triangles aux Y après
-    retournement : avec un rectangle qui n'est pas plein écran, tous les
-    triangles du rétro (y 312-376 → lignes 7-71) étaient rejetés. Les
-    triangles sont maintenant découpés comme le fast fill, dans les trois
-    chemins (logiciel, -hires3d logiciel, Vulkan). Les écritures LFB à
-    travers le pipeline gardent l'ancienne comparaison (non vu utilisé).
-  - Vérifié au pixel avant/après en attract (70 s) : GTI Club 1 et 2, Hang
-    Pilot, Thrill Drive 2, Xtrial Racing, San Francisco Rush, California
-    Speed, Gradius 4, Teraburst identiques ; Rush 2049 et 2049 SE : seule
-    l'horloge affichée diffère ; Racing Jam 1 et 2 : la bande grise du bas
-    de l'écran disparaît, la 3D descend jusqu'en bas (même cause, plus
-    juste). Thrill Drive : rétro en natif, Vulkan ×2, logiciel ×2.
-  - Avec `-widescreen`, la caméra du rétro est élargie aussi (seule −443,
-    le tableau de bord, est laissée), pour qu'il garde ses proportions une
-    fois étiré.
+- **Thrill Drive 2, `-widescreen`** (viper.cpp, all versions): the game does
+  its own 3D projection, so the hack goes through its code. The camera
+  structure (viewport 512x384, near 0.2, far 280, FOV 50°, tanH 1.1918, tanV
+  0.8938 at 0x5729a0) is filled once by a function (0x040b40 in all four
+  versions): `tan(fov)`, tanH at +0x34/+0x38, tanV = tanH × aspect at +0x3c,
+  then the frustum (left, right, top, bottom) passed to the function that
+  builds the clipping planes. The driver looks for the end of this function
+  by signature, puts a jump there to 12 instructions written at 0x3600 (empty
+  RAM between the vectors and the program) that multiply tanH and the right
+  of the frustum by 4/3 without touching the top or tanV: projection and
+  culling widen together. The screen keeps its size and is shown stretched to
+  16:9 (`hires3d_output::allow_anamorphic`). All cameras are widened, so the
+  rear-view mirror keeps its shape; texts and gauges are stretched.
+  - Tests: changing tanH on the fly widens the view (the frustum alone has no
+    effect, nor does the angle). The debugger watchpoints see nothing: the
+    RAM is DRC fastram. Code outside work RAM (0x02000000, 0xfe100000): the
+    game stays on its blue boot screen (cause not investigated; maybe
+    PowerPC address translation).
+  - Checked: thrild2, thrild2j, thrild2a, thrild2c patched at the same
+    address, correct race without `-hires3d` and on Vulkan ×2 and ×4; without
+    `-widescreen`, image pixel-identical to before.
+- **Race On!, late frame** (vk3d_context.cpp): the Vulkan image was one frame
+  behind native, over whole windows, depending on the launch and more often
+  at ×3 and ×4. The render lists and vertices sent to the GPU were identical
+  to native frame by frame (fingerprints), the image read back right after
+  the fence was the previous one, and became correct again right after
+  `vkDeviceWaitIdle` (not with an invalidation alone, nor with full
+  barriers). Cause: `submit_and_wait()`, which uploads the textures at
+  startup, left the context fence signalled; the System 23 renderer submits
+  each frame with this fence, believes it free, waits on it then resets it.
+  Submitted signalled, each wait returned immediately, and the read-back
+  took the previous image as long as the GPU lagged behind the CPU. The
+  fence is now reset after `submit_and_wait()` (the other chips have their
+  own fences, or reset this one before submitting). After the fix: ×2, ×3,
+  ×4, two launches, no shift, ×3 identical to native.
+- **Thrill Drive 1 in 16:9** (nwk-tr.cpp, `-widescreen`): thrilld and its
+  versions are on the NWK-TR driver (not Hornet: only the thrilldg* games are
+  there, marked not working). The PowerPC 403 has no FPU and keeps no camera
+  floats: perturbing ~6500 floats in its RAM and ~2750 in DSP block 1 did
+  nothing. It is the SHARC DSP that does the projection.
+  - Found by tracing the DSP writes to the Voodoo (Lua tap on
+    0x2400000-0x27fffff: fvertexAx..Cy at 0x2480022-27, ~460 triangles per
+    frame), then by walking back up the DSP command interpreter (each handler
+    reads its words with `DM(I4, M1)` in shared memory 0x400000 and jumps to
+    the next one through table 0x28283).
+  - Command 3 = viewport, 6 16-bit words: centre (256, 192), half-size
+    (256, 192), horizontal then vertical focal length in pixels, negative.
+    The DSP derives the projection from it (half-width / |focal|) and the
+    clipping planes (focal × 16). 7 viewports per frame: the world at −215
+    (256/215 = tan 50°, like the Thrill Drive 2 tangent), the 3D dashboard
+    (rev counter needle, speed digits) at −443, and a read of +128 at the
+    same PC with no visible effect.
+  - The patch: a read tap on the shared memory of both DSPs; when the DSP is
+    at the PC that reads the horizontal focal length (0x20130, found by an
+    8-instruction signature, checked every frame, searched once per second
+    while it is not there), the value is divided by the widening (4/3),
+    except −443 (the dashboard stays like the 2D, stretched) and positive
+    values. Image stretched to 16:9 (`allow_anamorphic`), like Thrill Drive
+    2.
+  - Pitfall: a first attempt (writing −332 to PowerPC RAM at 0x3eb2d4)
+    seemed to widen the view by eye, but the captures were pixel-identical:
+    always compare pixels.
+  - Checked on thrilld (only version available locally): without
+    `-widescreen`, pixel-identical image; with it, identical to the Lua test;
+    in a bgfx window with `-hires3d 2`, 16:9 image, cars with the right
+    proportions. In cockpit view, the bottom of the cabin, modelled for 4:3,
+    lets the road show at the edges. Only DSP 1 has the program (the site is
+    not found on DSP 2).
+- **Thrill Drive 1, empty rear-view mirror** (voodoo_render.cpp, voodoo.cpp,
+  voodoo_vk.cpp): the mirror frame (top centre) stayed plain mauve, with or
+  without `-widescreen`. A bug in MAME's Voodoo, not in the 16:9 hack.
+  - False lead: the 2nd video board (TWIN/SLAVE). Its DSP never has a
+    program in MAME, but the PowerPC only addresses board 0 (id 2 only at
+    startup); when copying the writes to board 1, it draws the same image as
+    board 0, since the DSP has no identity of its own (no flag or jumper
+    read).
+  - The mirror is drawn by board 0: one more viewport command, centre
+    (256, 344), half-size (128, 32), focal lengths +128/−128 (positive
+    horizontally: the image is flipped), clipping x 128-384, y 312-376 with
+    the Y origin at the bottom (fbzMode bit 17); a fast fill of the area with
+    0xaab4ff (the mauve), then ~60 triangles with an alpha test and a colour
+    key.
+  - Cause: the fast fill compares the clip rectangle with the Y values before
+    the flip (it fills the right area), the triangles with the Y values after
+    the flip: with a rectangle that is not full screen, all the mirror
+    triangles (y 312-376 → lines 7-71) were rejected. Triangles are now
+    clipped like the fast fill, in all three paths (software, -hires3d
+    software, Vulkan). LFB writes through the pipeline keep the old
+    comparison (not seen in use).
+  - Checked pixel by pixel before/after in attract mode (70 s): GTI Club 1
+    and 2, Hang Pilot, Thrill Drive 2, Xtrial Racing, San Francisco Rush,
+    California Speed, Gradius 4, Teraburst identical; Rush 2049 and 2049 SE:
+    only the displayed clock differs; Racing Jam 1 and 2: the grey band at
+    the bottom of the screen disappears, the 3D goes down to the bottom (same
+    cause, more accurate). Thrill Drive: mirror in native, Vulkan ×2,
+    software ×2.
+  - With `-widescreen`, the mirror camera is widened too (only −443, the
+    dashboard, is left alone), so that it keeps its proportions once
+    stretched.
 
-### Suite du 2026-11-14 : 16:9 des jeux qui projettent eux-mêmes, défauts connus
+### Continued, 2026-11-14: 16:9 for games that do their own projection, known defects
 
-- **Écritures LFB de la Voodoo** : rien à corriger. L'appel du pipeline
-  passe déjà le Y brut (`pixel_pipeline(..., x, y, ...)`), comme le fast
-  fill et maintenant les triangles.
-- **500gp, écran noir sous charge** : non reproduit, 6 instances en Vulkan
-  ×2 puis 8 en ×3 (130 s, démo), aucune image noire, aucun repli, images
-  finales identiques. Sans doute la fence laissée signalée (7e1b998871a,
-  Race On!) : sous charge, la relecture prenait une image pas dessinée.
-- **HNG64 en logiciel ×3, ×5** (hng64.h, hng64_3d.ipp, hng64_v.cpp) : les
-  masques `taille - 1` des rastériseurs et de `blit_3d` deviennent
-  `wrap()`, le même masque aux puissances de 2, un modulo sinon. Roads Edge
-  en course ×3 : logiciel = Vulkan (0,03 d'écart moyen, 26 avant).
-- **Race On!, menu en 16:9** : le fond est un mur de dalles en 3D posé par
-  le jeu sur la largeur 4:3 ; on voit au-delà en 16:9. Contenu du jeu, pas
-  corrigé.
-- **Blits 2D de la Banshee** : Rush 2049, 2049 SE et Cart Fury ne font
-  aucun blit écran à écran (200 s de démo et de course, compteur
-  temporaire). Seuls Thrill Drive 2 et Xtrial Racing (Voodoo 3) en font :
-  le rétroviseur copié ligne à ligne du tampon vers la mémoire des
-  textures ; une texture reste native sur le vrai matériel, et le
-  rastériseur natif est relancé quand un blit lit un tampon. Rien à faire.
-  Les autres commandes 2D (sauf hôte vers écran, déjà agrandi en blocs)
-  arrêtent MAME (`fatalerror`) : aucun jeu ne les utilise.
-- **16:9 « anamorphique »** sur les jeux qui projettent leur 3D eux-mêmes :
-  l'image garde sa taille, la vue est 4/3 plus large, l'écran est montré
-  en 16:9 (`hires3d_output::allow_anamorphic`). Sans `-widescreen`, 16 jeux
-  vérifiés identiques au pixel à l'exe d'avant (70 s de démo, natif, et
-  Vulkan ×2 pour 4 d'entre eux).
-  - Méthode : un compteur temporaire de la position X des sommets dit si le
-    jeu envoie de la géométrie hors de l'écran 4:3. Découpé au bord : K001005
-    (±256 exactement sur 19 millions de sommets), Voodoo (Rush, California
-    Speed, Rush 2049, Road Burners, Cart Fury, GTI Club 2, Hang Pilot,
-    Xtrial : < 0,5 %), Taito JC (Side by Side : 0). Au-delà : System 21
-    (Winning Run 18 %, Driver's Eyes 59 %), Gaelco 3D (3 à 11 %), V-Unit
+- **Voodoo LFB writes**: nothing to fix. The pipeline call already passes the
+  raw Y (`pixel_pipeline(..., x, y, ...)`), like the fast fill and now the
+  triangles.
+- **500gp, black screen under load**: not reproduced, 6 instances in Vulkan
+  ×2 then 8 in ×3 (130 s, demo), no black frame, no fallback, identical
+  final frames. Probably the fence left signalled (7e1b998871a, Race On!):
+  under load, the read-back took a frame that was not drawn.
+- **HNG64 in software ×3, ×5** (hng64.h, hng64_3d.ipp, hng64_v.cpp): the
+  `size - 1` masks of the rasterizers and of `blit_3d` become `wrap()`, the
+  same mask for powers of 2, a modulo otherwise. Roads Edge in race ×3:
+  software = Vulkan (0.03 mean difference, 26 before).
+- **Race On!, menu in 16:9**: the background is a wall of 3D tiles placed by
+  the game over the 4:3 width; you see past it in 16:9. Game content, not
+  fixed.
+- **Banshee 2D blits**: Rush 2049, 2049 SE and Cart Fury do no
+  screen-to-screen blit (200 s of demo and race, temporary counter). Only
+  Thrill Drive 2 and Xtrial Racing (Voodoo 3) do: the rear-view mirror,
+  copied line by line from the buffer to texture memory; a texture stays
+  native on the real hardware, and the native rasterizer is re-run when a
+  blit reads a buffer. Nothing to do. The other 2D commands (except host to
+  screen, already upscaled in blocks) stop MAME (`fatalerror`): no game uses
+  them.
+- **"Anamorphic" 16:9** on games that project their 3D themselves: the
+  image keeps its size, the view is 4/3 wider, the screen is shown in 16:9
+  (`hires3d_output::allow_anamorphic`). Without `-widescreen`, 16 games
+  checked pixel-identical to the previous exe (70 s of demo, native, and
+  Vulkan ×2 for 4 of them).
+  - Method: a temporary counter of vertex X positions tells whether the game
+    sends geometry outside the 4:3 screen. Clipped at the edge: K001005
+    (exactly ±256 over 19 million vertices), Voodoo (Rush, California Speed,
+    Rush 2049, Road Burners, Cart Fury, GTI Club 2, Hang Pilot, Xtrial:
+    < 0.5 %), Taito JC (Side by Side: 0). Beyond the edge: System 21
+    (Winning Run 18 %, Driver's Eyes 59 %), Gaelco 3D (3 to 11 %), V-Unit
     (Cruis'n USA 7 %, World 11 %, Off Road Challenge 5 %).
-  - **Racing Jam 1 et 2** (nwk-tr.cpp) : même commande viewport que Thrill
-    Drive 1 (signature trouvée en 0x20129 et 0x2012c). Focales : monde −247
-    (−233, −211, −210 dans Racing Jam 2), rétro +79 (+85) ; −154, −110 et
-    −332 dessinent le tableau de bord (compte-tours, chiffres) et sont
-    laissées, comme −443 sur TD1.
+  - **Racing Jam 1 and 2** (nwk-tr.cpp): same viewport command as Thrill
+    Drive 1 (signature found at 0x20129 and 0x2012c). Focal lengths: world
+    −247 (−233, −211, −210 in Racing Jam 2), mirror +79 (+85); −154, −110
+    and −332 draw the dashboard (rev counter, digits) and are left alone,
+    like −443 on TD1.
   - **GTI Club, Midnight Run, Winding Heat** (konppc.cpp, gticlub.cpp,
-    zr107.cpp) : le DSP tourne en recompilateur ; un tap Lua posé après la
-    compilation ne voit rien, et le PC lu depuis Lua est faux. Les taps
-    doivent être posés avant la première exécution (machine_start ou
-    video_start). Le DSP lit sa liste de commandes en mots de 16 bits dans
-    la mémoire partagée : `0x49` pentes de découpage (32 bits, 2.14,
-    demi-largeur / focale : 20337 et 15252), `0x46` viewport (centre 0,0,
-    demi-taille 256×192), `0x47` focales (32 bits, 16.16, −206,24). La
-    focale seule resserre l'image mais garde le découpage 4:3 (bandes
-    noires) ; la demi-largeur du viewport n'y fait rien ; la pente x de
-    0x49 multipliée par 4/3 avec la focale x divisée donne toute la
-    largeur. Le tap de konppc reconnaît la suite 0x49…0x46…0x47 et change
-    les 4 mots au moment où le DSP les lit. Vu en démo et en course, natif
-    et Vulkan ×2 ; ~5 % de sommets en plus (la vue plus large).
-  - **PlayStation** (gte.cpp, psx.cpp) : le X projeté par RTPS/RTPT est
-    multiplié par 3/4 autour de OFX (comme le hack de DuckStation). Pocket
-    Racer en course : vue plus large, voiture à sa forme, 2D étirée. Kart
-    Duel n'a pas démarré de course avec le script (titre seulement).
-  - **San Francisco Rush** (seattle.cpp) : caméras en RAM (structure
-    trouvée par les couples de flottants au rapport 4:3) : taille 512×384,
-    angles 60° et 46,8°, tangentes 0,57735 et 0,43301, inverses, cosinus,
-    1, ~2^24, centre 256,192, focales 443,41. La focale x seule resserre
-    avec des bandes noires, la tangente x seule ne change rien ; les deux
-    ensemble donnent la vue large. 4 caméras trouvées par leur forme et
-    patchées à chaque image quand le jeu remet la tangente de l'angle.
+    zr107.cpp): the DSP runs in the recompiler; a Lua tap set after
+    compilation sees nothing, and the PC read from Lua is wrong. Taps must
+    be set before the first execution (machine_start or video_start). The
+    DSP reads its command list as 16-bit words in shared memory: `0x49`
+    clipping slopes (32 bits, 2.14, half-width / focal length: 20337 and
+    15252), `0x46` viewport (centre 0,0, half-size 256×192), `0x47` focal
+    lengths (32 bits, 16.16, −206.24). The focal length alone narrows the
+    image but keeps the 4:3 clipping (black bars); the viewport half-width
+    does nothing; the x slope of 0x49 multiplied by 4/3 with the x focal
+    length divided gives the full width. The konppc tap recognises the
+    sequence 0x49…0x46…0x47 and changes the 4 words when the DSP reads
+    them. Seen in demo and in race, native and Vulkan ×2; ~5 % more
+    vertices (the wider view).
+  - **PlayStation** (gte.cpp, psx.cpp): the X projected by RTPS/RTPT is
+    multiplied by 3/4 around OFX (like the DuckStation hack). Pocket Racer
+    in race: wider view, car keeps its shape, 2D stretched. Kart Duel did
+    not start a race with the script (title only).
+  - **San Francisco Rush** (seattle.cpp): cameras in RAM (structure found
+    from float pairs at a 4:3 ratio): size 512×384, angles 60° and 46.8°,
+    tangents 0.57735 and 0.43301, inverses, cosines, 1, ~2^24, centre
+    256,192, focal lengths 443.41. The x focal length alone narrows with
+    black bars, the x tangent alone changes nothing; both together give the
+    wide view. 4 cameras found by their shape and patched every frame when
+    the game resets the tangent of the angle.
   - **Winning Run, Gaelco 3D, V-Unit** (namcos21_3d, gaelco3d_v,
-    midvunit_v) : les polygones sont dessinés 4/3 plus étroits autour du
-    centre (Gaelco : les gradients x des équations de plan multipliés
-    d'autant ; ses polygones 2D sans profondeur ne sont pas resserrés).
-    Ce que le jeu n'envoie pas manque aux bords, et les écrans que le jeu
-    couvre d'une image 4:3 (menus et transitions du V-Unit, game over de
-    Radikal Bikers, textes rangés hors de l'écran de Speed Up) montrent la
-    3D sur les côtés.
-  - **Pas faits** : California Speed, Rush 2049, Road Burners, Cart Fury
-    (pas de structure de caméra trouvée par la forme), Xtrial Racing et
-    GTI Club 2 (Viper : pas la fonction caméra de TD2 ; les structures de
-    viewport en 0x2700 n'ont aucun effet), Hang Pilot (commande 3 comme
-    TD1, autre code), Side by Side (DSP TMS320C51), Driver's Eyes (trois
-    écrans).
-  - Outils (scratchpad) : `sig/sigscan.lua` (signature du code DSP),
-    `sig/seq.lua` (flux de commandes lu par le DSP), `sig/f47.lua`,
-    `sig/pkm.lua` (multiplier des flottants à chaque image), `sig/ratio.lua`
-    (couples au rapport 4:3), `sig/pert.lua` (un flottant à la fois depuis
-    une sauvegarde : 0,3 à 0,5 s par candidat, trop lent pour toute la RAM),
-    `pkrun.sh` (EEPROM copiée à chaque lancement : sinon la démo change).
+    midvunit_v): polygons are drawn 4/3 narrower around the centre (Gaelco:
+    the x gradients of the plane equations multiplied by the same; its 2D
+    polygons without depth are not narrowed). What the game does not send
+    is missing at the edges, and the screens the game covers with a 4:3
+    image (V-Unit menus and transitions, Radikal Bikers game over, Speed Up
+    texts parked off screen) show the 3D on the sides.
+  - **Not done**: California Speed, Rush 2049, Road Burners, Cart Fury (no
+    camera structure found by shape), Xtrial Racing and GTI Club 2 (Viper:
+    not the TD2 camera function; the viewport structures at 0x2700 have no
+    effect), Hang Pilot (command 3 like TD1, different code), Side by Side
+    (TMS320C51 DSP), Driver's Eyes (three screens).
+  - Tools (scratchpad): `sig/sigscan.lua` (DSP code signature),
+    `sig/seq.lua` (command stream read by the DSP), `sig/f47.lua`,
+    `sig/pkm.lua` (multiply floats every frame), `sig/ratio.lua` (pairs at
+    a 4:3 ratio), `sig/pert.lua` (one float at a time from a save state:
+    0.3 to 0.5 s per candidate, too slow for the whole RAM), `pkrun.sh`
+    (EEPROM copied at each launch: otherwise the demo changes).
 
-### Suite du 2026-11-14 (après-midi) : 16:9 des jeux restants
+### Continued, 2026-11-14 (afternoon): 16:9 for the remaining games
 
-Six jeux de plus en 16:9 avec `-widescreen` (anamorphique, comme les
-précédents). Restent Cart Fury, Side by Side et Hang Pilot.
+Six more games in 16:9 with `-widescreen` (anamorphic, like the previous
+ones). Cart Fury, Side by Side and Hang Pilot remain.
 
-- **Driver's Eyes** (namcos21_de.cpp) : chaque pile projette au-delà de son
-  écran, vers les écrans voisins (59 % des sommets hors de l'écran 4:3) :
-  même resserrement que Winning Run, sur les trois écrans. Fait pour un seul
-  écran (le centre) ; côte à côte, les bords des écrans se recouvrent (le
-  titre « DRIVER'S EYES » montre des lettres en double aux jonctions).
-  Dans MAME, les écrans de côté n'ont pas la course en démo (déjà noté dans
-  le pilote).
-- **California Speed** (seattle.cpp) : la projection est recalculée à chaque
-  image par la fonction 0x80024a10 (`set_projection(tan h, ...)`), écrite
-  en 0x6dd538 : tan h, tan v = tan h × h / w, 1/(tan h² + 1),
-  1/(tan v² + 1), deux valeurs passées telles quelles, focale h = w / 2 /
-  tan h, focale v, centre x, centre y. Un patch à la vblank est écrasé avant
-  usage : un tap d'écriture (Seattle n'a pas de fastram, les écritures du
-  recompilateur MIPS passent par les handlers) multiplie la tangente,
-  divise la focale et recalcule 1/(tan² + 1) quand le jeu les écrit. La
-  structure est retrouvée par sa forme (les deux relations 1/(tan² + 1),
-  largeur = 2 × focale × tan entre 256 et 1024) ; les deux focales sont
-  égales tant qu'elle n'est pas patchée (pixels carrés).
-- **Rush 2049, 2049 SE, Road Burners** (vegas.cpp) : 4 caméras, mêmes champs
-  que celles de Rush 1 dans un autre ordre (focales, centre, 1, taille,
-  angles, tangentes, inverses, cosinus), 0xe4 octets d'écart : 0x132e530
-  (sf2049), 0x11aab50 (sf2049se), 0xbfabd0 (roadburn). La caméra 0 (90° en
-  horizontal) est celle de la course ; les caméras 1 à 3 (45°) ne sont
-  écrites qu'au démarrage. Mes premiers essais ne patchaient que celles-là
-  (rien ne changeait) : il faut tracer qui lit et écrit avant de conclure.
-  Patch à la vblank comme Rush 1 (tangente, inverse, cosinus, focale ;
-  l'angle reste et sert de repère « pas encore patchée ») ; tangente et
-  focale suffisaient. Recherche directe dans la RAM (`get_read_ptr` par
-  blocs de 1 Mo ; le contrôle de continuité doit comparer une adresse
-  alignée, 0xffffc, sinon tous les blocs étaient écartés).
-- **GTI Club 2** (viper.cpp) : la caméra a les champs de celle de Thrill
-  Drive 2 (tangente en +0x34 et +0x38, verticale +0x3c, forme h/w +0x40,
-  base 0x7f63d0), mais le jeu recalcule les tangentes à chaque image (pas la
-  forme) : un patch de données ne tient pas. La projection passe par une
-  bibliothèque façon OpenGL (`glMatrixMode(0x1701)`, `glLoadIdentity`,
-  `glFrustum(-r, r, -t, t, near, far)` en 0x39f5c) appelée en 0x3fdcc avec
-  r = near × tan, t = r × forme. Patch : `fmr f2, f29` (0x3fe20) devient un
-  saut vers la cave 0x3600 qui multiplie r par 4/3 après le calcul de t.
-  Les structures en 0x2700 de la note précédente sont la copie de ce
-  frustum (l, r, b, t, near, far) et la matrice 2n/(r-l) en 0x26dc :
-  écrites par la bibliothèque, d'où l'absence d'effet.
-- **Xtrial Racing** (viper.cpp) : même bibliothèque (glFrustum en 0x3a148),
-  mais les caméras sont des objets avec leur frustum en doubles (+0x80 à
-  +0xa8) appliqués par une fonction générique (2 exemplaires : 0x760e4 et
-  0x7e5c4). Le premier appelant trouvé (0x45e48, tan × aspect) ne servait
-  pas en course : image identique au pixel. Patch des deux appels :
-  gauche et droite × 4/3 avant `glFrustum`, une cave de 0x40 octets par
-  site.
-- Vérifié : Vulkan ×2 et natif sur California Speed, GTI Club 2, Xtrial,
-  Rush 2049 ; Road Burners et 2049 SE en natif. Sans `-widescreen`,
-  identique au pixel à l'exe d'avant (Driver's Eyes, California Speed,
-  Rush 1, GTI Club 2, Thrill Drive 2, Hang Pilot ; Xtrial : 3×3 pixels
-  diffèrent, comme entre deux lancements de l'ancien exe). Thrill Drive 2
-  avec `-widescreen` : identique à l'exe d'avant (code de viper remanié pour
-  plusieurs sites).
-- **Pas faits** :
-  - Cart Fury (Vegas, Voodoo 3) : fait la nuit suivante, voir plus bas.
-  - Side by Side (Taito JC) : fait le soir même, voir la section suivante.
-  - Hang Pilot : le mot 0x00034f7b (3,31 en 16.16) lu par les deux DSP en
-    0x400005-8 n'est pas la focale (le changer casse la 3D).
-- Pièges et outils (scratchpad) :
-  - Vegas (vrc5074) donne la RAM au recompilateur MIPS en fastram : les taps
-    Lua n'y voient rien. Build de test avec `add_fastram` coupé (variable
-    d'environnement, non commité). La RAM est installée par le BIOS après la
-    première image : un tap posé avant est effacé (le poser vers l'image
-    600). Avec `-debug -debugger none`, le PC lu depuis Lua est juste.
-  - Rush 2049, Road Burners, Cart Fury : la démo change d'un lancement à
-    l'autre (horloge du jeu prise sur l'heure du PC). Comparer dans un même
-    lancement : `sig/pkt.lua` capture, applique le patch quelques images,
-    recapture et restaure (`PM_ONCE=1` : une seule écriture, pour voir si le
-    jeu réécrit la valeur).
-  - Deux lancements du même jeu à CHD en même temps : « DIFF CHD ERROR ».
-    Deux jeux à CHD différents : possible.
-  - Dans les heredocs Python passés par l'outil Bash, `\n` devient un vrai
-    saut de ligne : écrire `chr(92) + 'n'`.
-  - Scripts : `sig/cscan.lua` (paires taille ou centre d'écran en
-    flottants), `sig/vfind.lua` (valeurs données), `sig/mtap.lua` (lectures
-    et écritures d'une plage par PC, avec `-debug`), `sig/codedump.lua` +
-    `sfdis.py` (désassemblage MIPS), `sig/ramdump.lua` + `ppcd.py`
-    (PowerPC), `sig/calw.lua` (prototype du tap de California Speed),
-    `sig/focal.lua`, `sig/pmat.lua`, `sig/sbtap.lua` (unité de calcul Taito
-    JC), `sig/hptap.lua`, `reg2.sh` (régression contre `mame_clip2.exe`).
+- **Driver's Eyes** (namcos21_de.cpp): each board stack projects beyond its
+  screen, towards the neighbouring screens (59 % of vertices outside the 4:3
+  screen): same narrowing as Winning Run, on all three screens. Done for a
+  single screen (the centre); side by side, the screen edges overlap (the
+  "DRIVER'S EYES" title shows doubled letters at the joins). In MAME, the
+  side screens do not show the race in demo (already noted in the driver).
+- **California Speed** (seattle.cpp): the projection is recomputed every
+  frame by function 0x80024a10 (`set_projection(tan h, ...)`), written at
+  0x6dd538: tan h, tan v = tan h × h / w, 1/(tan h² + 1), 1/(tan v² + 1),
+  two values passed as is, focal h = w / 2 / tan h, focal v, centre x,
+  centre y. A patch at vblank is overwritten before use: a write tap
+  (Seattle has no fastram, the MIPS recompiler's writes go through the
+  handlers) multiplies the tangent, divides the focal length and recomputes
+  1/(tan² + 1) when the game writes them. The structure is found by its
+  shape (the two 1/(tan² + 1) relations, width = 2 × focal × tan between
+  256 and 1024); the two focal lengths are equal as long as it is not
+  patched (square pixels).
+- **Rush 2049, 2049 SE, Road Burners** (vegas.cpp): 4 cameras, same fields
+  as Rush 1's in a different order (focal lengths, centre, 1, size, angles,
+  tangents, inverses, cosines), 0xe4 bytes apart: 0x132e530 (sf2049),
+  0x11aab50 (sf2049se), 0xbfabd0 (roadburn). Camera 0 (90° horizontal) is
+  the race camera; cameras 1 to 3 (45°) are only written at startup. My
+  first tests only patched those (nothing changed): trace who reads and
+  writes before concluding. Patch at vblank like Rush 1 (tangent, inverse,
+  cosine, focal length; the angle is kept and serves as the "not yet
+  patched" marker); tangent and focal length were enough. Direct search in
+  RAM (`get_read_ptr` in 1 MB blocks; the continuity check must compare an
+  aligned address, 0xffffc, otherwise all blocks were rejected).
+- **GTI Club 2** (viper.cpp): the camera has the fields of Thrill Drive 2's
+  (tangent at +0x34 and +0x38, vertical +0x3c, h/w shape +0x40, base
+  0x7f63d0), but the game recomputes the tangents every frame (not the
+  shape): a data patch does not hold. The projection goes through an
+  OpenGL-style library (`glMatrixMode(0x1701)`, `glLoadIdentity`,
+  `glFrustum(-r, r, -t, t, near, far)` at 0x39f5c) called at 0x3fdcc with
+  r = near × tan, t = r × shape. Patch: `fmr f2, f29` (0x3fe20) becomes a
+  branch to the code cave at 0x3600, which multiplies r by 4/3 after t is
+  computed. The structures at 0x2700 from the previous note are the copy of
+  this frustum (l, r, b, t, near, far) and the 2n/(r-l) matrix at 0x26dc:
+  written by the library, hence no effect.
+- **Xtrial Racing** (viper.cpp): same library (glFrustum at 0x3a148), but
+  the cameras are objects with their frustum in doubles (+0x80 to +0xa8)
+  applied by a generic function (2 copies: 0x760e4 and 0x7e5c4). The first
+  caller found (0x45e48, tan × aspect) was not used in race:
+  pixel-identical image. Patch of both calls: left and right × 4/3 before
+  `glFrustum`, one 0x40-byte code cave per site.
+- Checked: Vulkan ×2 and native on California Speed, GTI Club 2, Xtrial,
+  Rush 2049; Road Burners and 2049 SE in native. Without `-widescreen`,
+  pixel-identical to the previous exe (Driver's Eyes, California Speed,
+  Rush 1, GTI Club 2, Thrill Drive 2, Hang Pilot; Xtrial: 3×3 pixels
+  differ, as between two launches of the old exe). Thrill Drive 2 with
+  `-widescreen`: identical to the previous exe (viper code reworked for
+  several sites).
+- **Not done**:
+  - Cart Fury (Vegas, Voodoo 3): done the following night, see below.
+  - Side by Side (Taito JC): done the same evening, see the next section.
+  - Hang Pilot: the word 0x00034f7b (3.31 in 16.16) read by both DSPs at
+    0x400005-8 is not the focal length (changing it breaks the 3D).
+- Pitfalls and tools (scratchpad):
+  - Vegas (vrc5074) gives the RAM to the MIPS recompiler as fastram: Lua
+    taps see nothing there. Test build with `add_fastram` disabled
+    (environment variable, not committed). The RAM is installed by the BIOS
+    after the first frame: a tap set before is erased (set it around frame
+    600). With `-debug -debugger none`, the PC read from Lua is correct.
+  - Rush 2049, Road Burners, Cart Fury: the demo changes from one launch to
+    the next (game clock taken from the PC time). Compare within one
+    launch: `sig/pkt.lua` captures, applies the patch for a few frames,
+    captures again and restores (`PM_ONCE=1`: a single write, to see
+    whether the game rewrites the value).
+  - Two launches of the same CHD game at the same time: "DIFF CHD ERROR".
+    Two different CHD games: possible.
+  - In Python heredocs passed through the Bash tool, `\n` becomes a real
+    newline: write `chr(92) + 'n'`.
+  - Scripts: `sig/cscan.lua` (screen size or centre pairs as floats),
+    `sig/vfind.lua` (given values), `sig/mtap.lua` (reads and writes of a
+    range by PC, with `-debug`), `sig/codedump.lua` + `sfdis.py` (MIPS
+    disassembly), `sig/ramdump.lua` + `ppcd.py` (PowerPC), `sig/calw.lua`
+    (prototype of the California Speed tap), `sig/focal.lua`,
+    `sig/pmat.lua`, `sig/sbtap.lua` (Taito JC compute unit),
+    `sig/hptap.lua`, `reg2.sh` (regression against `mame_clip2.exe`).
 
-### Suite du 2026-11-14 (soir) : 16:9 de Side by Side
+### Continued, 2026-11-14 (evening): 16:9 for Side by Side
 
-- **Side by Side 1 et 2** (taitojc_v.cpp) : avec `-widescreen`, le mot que
-  le 68040 envoie au DSP en 0x0314 est divisé par 4/3 (tap d'écriture sur
-  l'espace data du DSP). Démarche :
-  - Le DSP recopie chaque matrice de vue (13 mots) de la liste de commandes
-    vers sa RAM interne en 0x0326 (PC 0x42ae) : un mot d'état puis 3 lignes
-    de 4 mots (3 termes en 2.14, 16384 = 1, et la translation). La ligne 0
-    (0x0327) est le X de l'écran, la ligne 1 le Y (essais ligne par ligne).
-  - Réduire la ligne 0 de 3/4 au moment de la copie élargit bien la vue,
-    mais déforme et troue les murs proches : ce n'est pas la seule mise à
-    l'échelle du X. Le nombre d'objets traités par le DSP ne change pas.
-  - Le 68040 a une fonction de champ de vision (0x080787ae, ~25 appels :
-    angle en dixièmes de degré, rapport d'aspect, 1, distance). Elle envoie
-    au DSP 0x0314 = 4096 / aspect et 0x0315 = 4096 × tan(angle / 2)
-    (commande 0xc002 en 0x080779d0), et garde pour elle 1 / (tan × aspect)
-    en 0x8038040 et 1 / tan en 0x8038044.
-  - Le DSP multiplie ses données par 0x0314 et 0x0315 (0x4434 dans Side by
-    Side, 0x43ca dans Side by Side 2) avant le découpage et le tri des
-    objets. 0x0314 × 3/4 : image resserrée de 0,74 à 0,76 en largeur, 1,00
-    en hauteur, sans trous. 0x8038040 ou 0x8038044 × 3/4 : aucun effet
-    visible ; 0x0315 × 4/3 : resserre aussi la hauteur.
-  - Side by Side écrit 0x0314 à chaque changement de scène (3303 = 4096 /
-    1,24), Side by Side 2 une image sur deux (3200 = 4096 / 1,28).
-- Vérifié : 7 captures de 2400 à 6300 sur Side by Side, 6 sur Side by Side 2,
-  en natif ; Side by Side aussi en Vulkan ×2 (même image, léger décalage
-  dans le temps). Sans `-widescreen`, identique au pixel à l'exe d'avant sur
-  les deux jeux. Avec `-widescreen`, la démo de Side by Side 2 dérive un
-  peu (le DSP n'a plus le même travail, donc pas le même temps).
-- Reste :
-  - Sur une capture de Side by Side 2 (cerisiers), un petit morceau de
-    bordure de route manque près du rail. Élargir aussi le tri du 68040
-    (0x8038040) ne change rien à l'image ; cause non trouvée.
-  - Textes et compteurs 2D étirés, comme sur les autres jeux anamorphiques.
-  - Dangerous Curves (même carte) n'est pas traité ni essayé : sa démo
-    n'atteint pas la 3D en 90 s (noté plus haut).
-- Outils (scratchpad `sig/`) : `jcdasm.lua` (désassemblage du DSP),
-  `sbwide.lua` (mise à l'échelle d'une ligne de matrice), `sbread.lua`
-  (accès à la RAM interne du DSP par PC), `sbcount.lua` (matrices, sommets,
-  FIFO par image), `sbpc.lua` (écritures du 68040 vers le DSP),
-  `sbfov.lua` (facteurs sur 0x0314/0x0315 et 0x8038040/44), `orth.py`
-  (matrices de rotation dans un vidage de RAM), `hscale.py` (échelle
-  horizontale et verticale entre deux captures).
+- **Side by Side 1 and 2** (taitojc_v.cpp): with `-widescreen`, the word
+  the 68040 sends to the DSP at 0x0314 is divided by 4/3 (write tap on the
+  DSP data space). Approach:
+  - The DSP copies each view matrix (13 words) from the command list to its
+    internal RAM at 0x0326 (PC 0x42ae): a status word then 3 rows of 4
+    words (3 terms in 2.14, 16384 = 1, and the translation). Row 0 (0x0327)
+    is the screen X, row 1 the Y (tested row by row).
+  - Scaling row 0 by 3/4 at copy time does widen the view, but distorts and
+    punches holes in nearby walls: it is not the only X scaling. The number
+    of objects processed by the DSP does not change.
+  - The 68040 has a field-of-view function (0x080787ae, ~25 calls: angle in
+    tenths of a degree, aspect ratio, 1, distance). It sends the DSP
+    0x0314 = 4096 / aspect and 0x0315 = 4096 × tan(angle / 2) (command
+    0xc002 at 0x080779d0), and keeps 1 / (tan × aspect) at 0x8038040 and
+    1 / tan at 0x8038044 for itself.
+  - The DSP multiplies its data by 0x0314 and 0x0315 (0x4434 in Side by
+    Side, 0x43ca in Side by Side 2) before clipping and sorting the objects.
+    0x0314 × 3/4: image narrowed from 0.74 to 0.76 in width, 1.00 in
+    height, no holes. 0x8038040 or 0x8038044 × 3/4: no visible effect;
+    0x0315 × 4/3: also narrows the height.
+  - Side by Side writes 0x0314 at each scene change (3303 = 4096 / 1.24),
+    Side by Side 2 every other frame (3200 = 4096 / 1.28).
+- Checked: 7 captures from 2400 to 6300 on Side by Side, 6 on Side by
+  Side 2, in native; Side by Side also in Vulkan ×2 (same image, slight
+  time offset). Without `-widescreen`, pixel-identical to the previous exe
+  on both games. With `-widescreen`, the Side by Side 2 demo drifts a little
+  (the DSP no longer has the same work, so not the same timing).
+- Remaining:
+  - On one Side by Side 2 capture (cherry trees), a small piece of road
+    edge is missing near the rail. Also widening the 68040 sort (0x8038040)
+    changes nothing in the image; cause not found.
+  - 2D texts and gauges stretched, as on the other anamorphic games.
+  - Dangerous Curves (same board) is neither handled nor tried: its demo
+    does not reach the 3D in 90 s (noted above).
+- Tools (scratchpad `sig/`): `jcdasm.lua` (DSP disassembly), `sbwide.lua`
+  (scaling of one matrix row), `sbread.lua` (DSP internal RAM accesses by
+  PC), `sbcount.lua` (matrices, vertices, FIFO per frame), `sbpc.lua`
+  (68040 writes to the DSP), `sbfov.lua` (factors on 0x0314/0x0315 and
+  0x8038040/44), `orth.py` (rotation matrices in a RAM dump), `hscale.py`
+  (horizontal and vertical scale between two captures).
 
-### Suite du 2026-11-14 (nuit) : Cart Fury, 2D en 16:9, Dangerous Curves
+### Continued, 2026-11-14 (night): Cart Fury, 2D in 16:9, Dangerous Curves
 
-- **Cart Fury** (vegas.cpp, vrc5074) : fait.
-  - Les sommets partent vers la Voodoo 3 par le CMDFIFO (mémoire PCI
-    0x12e70000-0x12e8ffff, `sig/pcitap.lua` et `sig/pcival.lua` sur
-    l'espace `memory_space` de `:pci:00.0`), déjà projetés : X, Y en
+- **Cart Fury** (vegas.cpp, vrc5074): done.
+  - Vertices go to the Voodoo 3 through the CMDFIFO (PCI memory
+    0x12e70000-0x12e8ffff, `sig/pcitap.lua` and `sig/pcival.lua` on the
+    `memory_space` space of `:pci:00.0`), already projected: X, Y in
     pixels, 1/W, S/W, T/W.
-  - Envoi des triangles en 0x80189f8c (sommets projetés en +0x10 X,
-    +0x14 Y, +0x18 1/W) ; projection en 0x80151630 : 1/W = 1 / z,
-    X = cx + x × 1/W, Y = cy + y × 1/W, codes de sortie sur [0, 512] ×
-    [0, 384], six copies déroulées. La matrice de vue est en globales :
-    ligne X 0x80619478, 0x80619550, 0x806196e4 ; Y 0x8061954c, 0x806196e0,
-    0x806197ac ; Z 0x806196dc, 0x806197a8, 0x80619844 (non mise à
-    l'échelle) ; X et Y = rotation de la caméra × focale [0x805cc720]
-    (environ 550). Écrite par trois fonctions de caméra (0x8015c36c,
-    0x8015c918, 0x8015d388) juste avant le dessin : la patcher à la vblank
-    ne sert à rien.
-  - Correctif : avec `-widescreen`, la page 0x00619000 est exclue de la
-    fastram du recompilateur MIPS (`vrc5074_device::set_fastram_hole`,
-    la fastram est coupée en deux autour du trou ; 3 entrées au plus,
-    ROM comprise) et un tap d'écriture divise les trois termes de la
-    ligne X par 4/3. Le code qui l'écrit est vérifié avant (3 mots en
-    0x0015d398, 0x0015d3a8, 0x0015d3e4 ; une seule version du jeu).
-  - Vérifié : 6 captures de 2400 à 5400 en natif (vue plus large, voitures
-    aux bonnes proportions, écran de présentation de l'équipe aussi) et 3
-    en Vulkan ×2. La démo change à chaque lancement : pas de comparaison au
-    pixel ; sans `-widescreen` le trou n'est pas posé, rien ne change.
-  - La 2D (bandeaux, crédits) est dessinée par la Voodoo : étirée.
-- **2D en 16:9** (point 6) : `hires3d_output::narrow_2d()`, `narrow()`,
-  `upscale_2d()`, `draw_2d()` et `set_narrow_area()`. Avec `-widescreen`
-  sur un jeu anamorphique, la couche 2D du dessus est rétrécie de 3/4
-  autour du milieu (elle reprend sa forme une fois étirée) ;
-  `-widescreen_2d stretch` garde l'ancien comportement.
-  - Fait : Side by Side 1 et 2 (objets prioritaires et couche texte ; les
-    caches noirs des colonnes 0-16 et 496-511 restent aux bords), GTI Club,
-    Midnight Run, Winding Heat, Racing Jam 1 et 2, Thrill Drive 1 (couche
-    avant K001604 ou K056832). Natif, logiciel HD (rétréci pendant
-    l'agrandissement, sans perte), Vulkan (rétréci en natif avant le
-    mélange : une colonne sur quatre tombe, le texte est un peu moins
-    net).
-  - Vérifié : Side by Side en natif, logiciel ×2 et Vulkan ×2 ; sans
-    `-widescreen`, identique au pixel. Konami : textes de démarrage et
-    CREDIT recentrés ; Midnight Run en course ; GTI Club et Racing Jam
-    n'ont pas atteint la course dans ces essais (nvram).
-  - Pas faisable simplement : jeux Voodoo (Rush, Rush 2049, California
-    Speed, Road Burners, Cart Fury, Thrill Drive 2, GTI Club 2, Xtrial) :
-    la 2D est faite de triangles de la Voodoo, mêlés à la 3D ; Winning Run
-    (mélange 2D/3D dans le shader Vulkan, à modifier aussi) ; PlayStation
-    (sprites du GPU dans le même tampon) ; V-Unit, Gaelco 3D, Driver's
-    Eyes non regardés.
-- **Dangerous Curves** (point 4) : toujours pas de 3D.
-  - Au démarrage, le DSP teste s'il y a de la RAM en données 0x1400
-    (écrit 0x1234 et relit, en 0x7f0a) et choisit BMAR = 0x0800 si oui,
-    0x4000 sinon ; il écrit le résultat en 0x7800/0x7801 pour le 68040.
-    Dans MAME, rien en 0x1400 : le 68040 envoie alors une commande que la
-    table du DSP (0x2025, en SARAM du C51) ne connaît pas, et le DSP
-    tourne dans son piège (`b 2065`).
-  - En simulant de la RAM en 0x0c00-0x2bff (taps Lua, `sig/dcram.lua`), le
-    jeu passe ses menus et lance une vraie course (compte à rebours,
-    chrono, tableau de bord), mais sans 3D : le DSP attend ses commandes
-    en 0x7ff0 (code relogé en 0x0800) et le 68040 ne lui en envoie pas.
-  - TMS320C50 (9K SARAM aux mêmes adresses en programme et données) puis
-    TMS320C53 essayés à la place du C51 : le DSP plante en 8 s (le code
-    est fait pour la SARAM du C51 en programme 0x2000). Annulé.
-  - Piste : de la RAM externe en données 0x0c00-0x5fff sur la carte de
-    Dangerous Curves, puis comprendre pourquoi le 68040 n'envoie rien.
-- **Trou de Side by Side 2** (point 5) : non corrigé.
-  - En 16:9, la bande de bordure de route le long du rail gauche manque par
-    endroits (scène des cerisiers, plusieurs images de suite).
-  - Le 68040 envoie autant d'objets en 4:3 qu'en 16:9 ; ses valeurs de
-    champ de vision (0x8038040, 0x8038044, réglées par 0x080787ae, ~25
-    appels) n'y changent rien, dans un sens ou dans l'autre.
-  - Dans le DSP, l'échelle 0x0314 s'applique aux sommets des polygones
-    après leur transformation (boucle en 0x03c5 de Side by Side 2), avant
-    leurs codes de sortie (0x0754 : |X| comparé à Z) : cohérent. Le test de
-    boîte englobante (0x0505, 8 coins, codes avant l'échelle, donc en
-    4:3) ne sert qu'à une dizaine d'objets toutes les 4 images.
-  - Cause non trouvée ; il faudrait suivre un des morceaux manquants dans
-    le DSP.
-- Outils (scratchpad `sig/`) : `play.lua` (pièce, départ, accélérateur),
+  - Triangle submission at 0x80189f8c (projected vertices at +0x10 X,
+    +0x14 Y, +0x18 1/W); projection at 0x80151630: 1/W = 1 / z,
+    X = cx + x × 1/W, Y = cy + y × 1/W, outcodes on [0, 512] × [0, 384],
+    six unrolled copies. The view matrix is in globals: X row 0x80619478,
+    0x80619550, 0x806196e4; Y 0x8061954c, 0x806196e0, 0x806197ac; Z
+    0x806196dc, 0x806197a8, 0x80619844 (not scaled); X and Y = camera
+    rotation × focal length [0x805cc720] (about 550). Written by three
+    camera functions (0x8015c36c, 0x8015c918, 0x8015d388) just before
+    drawing: patching it at vblank is useless.
+  - Fix: with `-widescreen`, page 0x00619000 is excluded from the MIPS
+    recompiler's fastram (`vrc5074_device::set_fastram_hole`, the fastram
+    is split in two around the hole; 3 entries at most, ROM included) and
+    a write tap divides the three terms of the X row by 4/3. The code that
+    writes it is checked first (3 words at 0x0015d398, 0x0015d3a8,
+    0x0015d3e4; only one version of the game).
+  - Checked: 6 captures from 2400 to 5400 in native (wider view, cars at
+    the right proportions, team presentation screen too) and 3 in Vulkan
+    ×2. The demo changes at each launch: no pixel comparison; without
+    `-widescreen` the hole is not set, nothing changes.
+  - The 2D (banners, credits) is drawn by the Voodoo: stretched.
+- **2D in 16:9** (item 6): `hires3d_output::narrow_2d()`, `narrow()`,
+  `upscale_2d()`, `draw_2d()` and `set_narrow_area()`. With `-widescreen`
+  on an anamorphic game, the top 2D layer is narrowed by 3/4 around the
+  middle (it gets its shape back once stretched); `-widescreen_2d stretch`
+  keeps the old behaviour.
+  - Done: Side by Side 1 and 2 (priority objects and text layer; the black
+    masks of columns 0-16 and 496-511 stay at the edges), GTI Club,
+    Midnight Run, Winding Heat, Racing Jam 1 and 2, Thrill Drive 1 (front
+    layer K001604 or K056832). Native, software HD (narrowed during
+    upscaling, lossless), Vulkan (narrowed at native resolution before
+    mixing: one column in four is dropped, the text is a little less
+    sharp).
+  - Checked: Side by Side in native, software ×2 and Vulkan ×2; without
+    `-widescreen`, pixel-identical. Konami: startup texts and CREDIT
+    re-centred; Midnight Run in race; GTI Club and Racing Jam did not reach
+    the race in these runs (nvram).
+  - Not simply doable: Voodoo games (Rush, Rush 2049, California Speed,
+    Road Burners, Cart Fury, Thrill Drive 2, GTI Club 2, Xtrial): the 2D is
+    made of Voodoo triangles, mixed with the 3D; Winning Run (2D/3D mixing
+    in the Vulkan shader, to be changed too); PlayStation (GPU sprites in
+    the same buffer); V-Unit, Gaelco 3D, Driver's Eyes not looked at.
+- **Dangerous Curves** (item 4): still no 3D.
+  - At startup, the DSP tests whether there is RAM at data 0x1400 (writes
+    0x1234 and reads back, at 0x7f0a) and picks BMAR = 0x0800 if so,
+    0x4000 otherwise; it writes the result at 0x7800/0x7801 for the 68040.
+    In MAME, nothing at 0x1400: the 68040 then sends a command that the DSP
+    table (0x2025, in the C51 SARAM) does not know, and the DSP spins in
+    its trap (`b 2065`).
+  - When simulating RAM at 0x0c00-0x2bff (Lua taps, `sig/dcram.lua`), the
+    game goes through its menus and starts a real race (countdown, timer,
+    dashboard), but without 3D: the DSP waits for its commands at 0x7ff0
+    (code relocated to 0x0800) and the 68040 sends it none.
+  - TMS320C50 (9K SARAM at the same addresses in program and data) then
+    TMS320C53 tried in place of the C51: the DSP crashes in 8 s (the code
+    is made for the C51 SARAM at program 0x2000). Reverted.
+  - Lead: external RAM at data 0x0c00-0x5fff on the Dangerous Curves
+    board, then understand why the 68040 sends nothing.
+- **Side by Side 2 hole** (item 5): not fixed.
+  - In 16:9, the road edge strip along the left rail is missing in places
+    (cherry tree scene, several frames in a row).
+  - The 68040 sends as many objects in 4:3 as in 16:9; its field-of-view
+    values (0x8038040, 0x8038044, set by 0x080787ae, ~25 calls) change
+    nothing, in either direction.
+  - In the DSP, the 0x0314 scale is applied to the polygon vertices after
+    their transformation (loop at 0x03c5 in Side by Side 2), before their
+    outcodes (0x0754: |X| compared to Z): consistent. The bounding box test
+    (0x0505, 8 corners, outcodes before the scale, so in 4:3) is only used
+    for about ten objects every 4 frames.
+  - Cause not found; one of the missing pieces would have to be followed
+    in the DSP.
+- Tools (scratchpad `sig/`): `play.lua` (coin, start, accelerator),
   `dcram.lua`, `dcmon.lua`, `dspc.lua`, `jcdasm2.lua`, `pcitap.lua`,
   `pcival.lua`, `cfmat.lua`, `cfwide.lua`, `snap.lua`.
 
-### Suite du 2026-11-14 (fin de nuit) : 2D en 16:9, vérifications et System 21
+### Continued, 2026-11-14 (late night): 2D in 16:9, checks and System 21
 
-- **Vérification en jeu de la 2D Konami** (`sig/kplay.lua` : pièces, Start
-  toutes les 2 s dans les menus, accélérateur au maximum, bouton Test) :
-  Thrill Drive 1 fait une vraie course, le HUD (temps, position, compteur)
-  garde sa forme ; GTI Club reste en démo, mais ses textes (SHORTCUT, TAG
-  RACE, CRASH, CREDIT) sont rétrécis ; Racing Jam part dans son menu de
-  test (erreur de sauvegarde) : le texte du menu est rétréci, la course
-  n'est pas vue (même pilote que Thrill Drive 1).
-- **Winning Run** (namcos21.cpp) : en course (priorité 2), la couche 2D
-  au-dessus de la 3D est rétrécie : `bitmap_draw` (natif et logiciel HD,
-  par `hires3d_output::narrow_column`) et le shader de mélange Vulkan
-  (`mix.frag`, 4 constantes de plus : milieu, facteur, colonnes, par
-  `narrow_params` ; `tri.vert` recompilé pour la nouvelle taille). Le
-  titre (priorité 5) et le mode test (0) gardent la couche entière. Le
-  cockpit est en 3D. Vérifié en natif, logiciel ×2 et Vulkan ×2 ; sans
-  `-widescreen`, identique au pixel.
-- **Driver's Eyes** (namcos21_de.cpp) : les sprites de priorité 15
-  (au-dessus de la 3D) sont rétrécis, mais presque toute la 2D (menus,
-  vitesse) est en priorité 14, sous la 3D, avec les décors : elle reste
-  étirée, pas de changement visible. Sans `-widescreen`, identique au
-  pixel.
+- **In-game check of the Konami 2D** (`sig/kplay.lua`: coins, Start every
+  2 s in the menus, accelerator at maximum, Test button): Thrill Drive 1
+  runs a real race, the HUD (time, position, speedometer) keeps its shape;
+  GTI Club stays in demo, but its texts (SHORTCUT, TAG RACE, CRASH, CREDIT)
+  are narrowed; Racing Jam goes into its test menu (backup error): the
+  menu text is narrowed, the race is not seen (same driver as Thrill
+  Drive 1).
+- **Winning Run** (namcos21.cpp): in race (priority 2), the 2D layer above
+  the 3D is narrowed: `bitmap_draw` (native and software HD, through
+  `hires3d_output::narrow_column`) and the Vulkan mixing shader
+  (`mix.frag`, 4 more constants: middle, factor, columns, through
+  `narrow_params`; `tri.vert` recompiled for the new size). The title
+  (priority 5) and test mode (0) keep the full layer. The cockpit is in
+  3D. Checked in native, software ×2 and Vulkan ×2; without `-widescreen`,
+  pixel-identical.
+- **Driver's Eyes** (namcos21_de.cpp): priority 15 sprites (above the 3D)
+  are narrowed, but almost all the 2D (menus, speed) is in priority 14,
+  under the 3D, with the scenery: it stays stretched, no visible change.
+  Without `-widescreen`, pixel-identical.
