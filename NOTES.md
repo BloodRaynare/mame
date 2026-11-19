@@ -1374,3 +1374,31 @@ ones). Cart Fury, Side by Side and Hang Pilot remain.
   with anamorphic `-widescreen` (26ee852cdcb, in release g0777442). Fixed in
   ba1757c914a; native, ×2 and ×2 `-widescreen` run with exit code 0.
 - README-mame3d.txt: list of the games tested with GPU acceleration.
+
+### Continued, 2026-11-19: what Battle Gear 1 and 2 (Taito Type Zero) lack
+
+Not mame3d scope yet (MAME marks them not working); looked at on the owner's
+request. ROMs copied locally: taitotz, batlgear (+ batlgear.chd), batlgr2
+(+ bg2_204j.chd). Only e68-01.ic7 is missing (sound CPU internal ROM, no dump
+known).
+- **Boot**: both load from the CHD and stop on "RANKING DATA LOST, PUSH
+  TEST-SW". Test initialises the backup data and deletes the replay files on
+  the disk (a few minutes emulated).
+- **batlgr2 after that**: full attract mode with its 3D (intro, title, demo
+  race, car showcase, rankings) at about 200 % speed unthrottled. Test menu
+  works; the switch test sees coin, service, shift up/down and view. Shift
+  up moves the menu cursor down, Start selects.
+- **Blocker 1, disk loading**: the PPC asks the TLCS-900 for each sector
+  (command 0x1010 in the common RAM) and polls for the answer
+  (0x40101f04-0x40101f28). The handshake goes through the 120 Hz scheduler
+  quantum: about one sector per frame. After a coin the game stays on the
+  ranking screens for minutes; in a 560 s run it never left the last ranking
+  page (no credit shown, no race). An experiment with `perfect_quantum` on
+  each handshake broke the boot ("DUMMY PROGRAM IS RUNNING"), reverted. A fix
+  needs the real TLCS/PPC synchronisation (or a faster HDD path).
+- **Blocker 2, sound**: MN1020819DA sound CPU (internal ROM undumped) with
+  ZOOM ZSG-2 / ZFX-2; the BIOS is patched to skip the sound load timeout.
+- **Also missing**: the IEEE1394 LAN (link play); the renderer has fixed
+  lighting (white diffuse/specular, one light), additive blending off and
+  the texture switch bits unknown.
+- batlgear (BIOS 1.11a): only the boot and the warning screen were seen.
