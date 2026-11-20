@@ -166,6 +166,12 @@ Display
   a background that does not extend past the 4:3 screen (HNG64 menus) is
   stretched with the rest.
 
+Since mame3d 0.289-2539-gf7e5713
+- Merges of upstream MAME up to 2026-11-20 (51 commits). None touches the
+  hardware of mame3d. OpenH264 (H.264 video of a few non-arcade machines)
+  is no longer built in: those machines load openh264-2.7.0-win64.dll at
+  run time if it is present. mame.exe still only depends on Windows DLLs.
+
 Since mame3d 0.289-2362-g0777442
 - Merge of upstream MAME from 2026-11-18 (172 commits). The Fujitsu F2MC-16
   interrupt fix of upstream replaces ours (Namco ASCA-3A I/O board,
@@ -307,7 +313,7 @@ Since MAME njz3 FFB edition 0.289-1946-g8e81ca4
 - Capcom link (CPS2): the USART buffer is no longer emptied by the network
   thread.
 
-Based on upstream MAME from 2026-11-18, with:
+Based on upstream MAME from 2026-11-20, with:
 
 - Option -write_directory / -writedir <folder> (or the write_directory key
   in mame.ini): everything MAME writes (mame.ini, ui.ini, plugin.ini, game
