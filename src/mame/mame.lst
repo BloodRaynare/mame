@@ -18590,6 +18590,7 @@ mjfriday
 mjreach
 mjreacha
 mjreachbl
+mjreachbl2
 mjreachp2
 mjtkp2
 mjwitomo
@@ -21030,6 +21031,12 @@ z22
 @source:heathzenith/z29.cpp
 z29
 
+@source:heathzenith/z39.cpp
+z39
+
+@source:heathzenith/z49.cpp
+z49
+
 @source:heathzenith/z100.cpp
 z100
 
@@ -21786,6 +21793,9 @@ fl7_500_gs07
 fl7_500_gs08
 fl7_500_gs09
 fl7_500_gs10
+fl7_500_gs11
+fl7_500_gs12
+fl7_500_gs13
 fl7_1000
 fl7_2000
 fl7_2k16
@@ -40940,6 +40950,7 @@ sandaha
 @source:sealy/sealy_z80.cpp
 bbddz
 bbddza
+clonek2
 ddz1
 ddz2
 ddz2a
@@ -44260,6 +44271,9 @@ fs3216
 @source:skeleton/ft68m.cpp
 ft68m
 
+@source:skeleton/futsala.cpp
+futsala
+
 @source:skeleton/galpro.cpp
 galpro
 
@@ -45406,6 +45420,7 @@ ikari3
 ikari3j
 ikari3k
 ikari3u
+ikari3ua
 ikari3w
 pow
 powa
