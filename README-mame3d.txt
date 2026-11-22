@@ -89,14 +89,14 @@ with and without -widescreen).
     Midway V-Unit          : crusnusa (Cruis'n USA), crusnwld (Cruis'n
                              World), offroadc (Off Road Challenge)
     Midway Zeus 2          : crusnexo (Cruis'n Exotica)
-    Taito JC               : sidebs (Side by Side), sidebs2 (Side by Side 2)
+    Taito JC               : sidebs (Side by Side), sidebs2 (Side by Side 2),
+                             dangcurv (Dangerous Curves)
     Gaelco 3D              : speedup (Speed Up), surfplnt (Surf Planet),
                              radikalb (Radikal Bikers)
     SNK Hyper Neo Geo 64   : roadedge (Roads Edge), xrally (Xtreme Rally)
     Namco System 23        : raceon (Race On!), 500gp (500 GP), motoxgo
                              (Motocross Go!)
     PlayStation graphics   : pocketrc (Pocket Racer), kartduel (Kart Duel)
-- Not working: dangcurv (Dangerous Curves, Taito JC): MAME shows no 3D.
 - Not tried (no ROM here): Jet Wave, San Francisco Rush: The Rock,
   Hyperdrive, Vapor TRX.
 - Thrill Drive, Racing Jam 1 and 2 ask for their memory to be initialised
@@ -147,7 +147,7 @@ Display
     the edges, and a screen the game covers with a 4:3 picture (menus,
     transitions, game over of the V-Unit games and Radikal Bikers) shows
     the 3D behind it on the sides.
-  Not yet: Hang Pilot (Voodoo), Dangerous Curves (Taito JC, no 3D in MAME).
+  Not yet: Hang Pilot (Voodoo), Dangerous Curves (Taito JC).
   Example: mame midnrun -hires3d 2 -widescreen
 - Thrill Drive 2 (all versions): the rear view mirror keeps its shape.
   Thrill Drive 1 and Racing Jam: the 3D parts of the dashboard (rev
@@ -165,6 +165,22 @@ Display
   leaves black on the sides. With -widescreen_bg and -widescreen_2d stretch,
   a background that does not extend past the 4:3 screen (HNG64 menus) is
   stretched with the rest.
+
+Since mame3d 0.289-2595-gc1d1cc1
+- Merge of upstream MAME from 2026-11-22 (43 commits). Dangerous Curves
+  (Taito JC) now works in MAME, 3D included; its 3D is drawn at high
+  resolution like Side by Side (tested in race, Vulkan x2). Upstream also
+  reworked the Super System 22 sprites (Alpine Racer, Cyber Cycles, Dirt
+  Dash...): tested again on Vulkan.
+- Leaving a game started from MAME's system list showed a "MAME" box with
+  validity errors ("Field '3 / ?' has invalid characters") for Virtua
+  Racing, Hard Drivin', Race Drivin', Road Burners, Rush 2049, Model 2 and
+  System 23 games: the arrow key names of a serial terminal (SWTPC 8212)
+  were badly encoded by this MSVC build. Fixed.
+- Virtua Racing on a 4:3 screen: MAME's own layout for vr shows the game
+  in a 16:9 frame (view "Wide (16:9)"). Choose the view "Screen 0
+  Standard (4:3)" (Video Options menu, or a vr.ini with the line
+  view  Screen 0 Standard (4:3)).
 
 Since mame3d 0.289-2539-gf7e5713
 - Merges of upstream MAME up to 2026-11-20 (51 commits). None touches the
@@ -313,7 +329,7 @@ Since MAME njz3 FFB edition 0.289-1946-g8e81ca4
 - Capcom link (CPS2): the USART buffer is no longer emptied by the network
   thread.
 
-Based on upstream MAME from 2026-11-20, with:
+Based on upstream MAME from 2026-11-22, with:
 
 - Option -write_directory / -writedir <folder> (or the write_directory key
   in mame.ini): everything MAME writes (mame.ini, ui.ini, plugin.ini, game
