@@ -20,7 +20,7 @@ jobs:
       - name: Generate VS2022 Solution & Compile
         shell: cmd
         run: |
-          mingw32-make -j${env.NUMBER_OF_PROCESSORS} SUBTARGET=mame3d vs2022 MODERN_WIN_API=1 NOWERROR=1
+          mingw32-make -j${{ env.NUMBER_OF_PROCESSORS }} SUBTARGET=mame3d vs2022 MODERN_WIN_API=1 NOWERROR=1
           msbuild build\projects\windows\mame\vs2022\mame.sln /p:Configuration=Release /p:Platform=x64 /m
 
       - name: Upload Compiled Binary
