@@ -1443,3 +1443,16 @@ known).
     identical (xtrial varies per run, RTC), so no visible case found yet.
 - Bench native/x2 on the new exe: sf2049, sf2049se, cartfury, thrild2,
   xtrial, gticlub2, dangcurv, sidebs exit 0, no black frame.
+
+### Continued, 2026-11-23 (evening): no-nag lost and restored
+
+- The no-nag change (`show_warnings = false` in
+  `mame_ui_manager::display_startup_screens`, Endprodukt 67b9f588841) was
+  lost in the upstream merge afacf58514f (2026-11-18): upstream set the same
+  line by mistake in 868c260f62b (merged on 2026-11-12, so it became the
+  merge base) and reverted it in 7d2d1bc35c3; the merge then took the
+  revert. Releases gf7e5713, gead95f7 and g7c5dda3 show the warning screen
+  again; thrild2 and raceon wait on it for a key (no frame emulated in 25 s
+  in a d3d window). Restored, with a comment; thrild2, raceon and vr reach
+  frame 60 at once. After each upstream merge, check
+  `grep "bool show_warnings" src/frontend/mame/ui/ui.cpp`.

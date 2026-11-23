@@ -169,6 +169,13 @@ Display
   a background that does not extend past the 4:3 screen (HNG64 menus) is
   stretched with the rest.
 
+Since mame3d 0.289-2664-g7c5dda3
+- The driver warning screen ("This machine has known problems...",
+  "Press any key to continue") was shown again at start-up since
+  0.289-2539-gf7e5713: an upstream merge undid the no-nag change. Games
+  marked not working or imperfect (Thrill Drive 2, Race On!...) waited on
+  it for a key. Fixed again.
+
 Since mame3d 0.289-2641-gead95f7
 - Merge of upstream MAME from 2026-11-23 (21 commits). Taito JC (Side by
   Side 1/2, Dangerous Curves): the polygons cut at the screen edges no
