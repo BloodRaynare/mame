@@ -1425,3 +1425,21 @@ known).
   race reached, Vulkan x2 equal to native. Bench native/x2: dangcurv,
   dirtdash, alpinerd, cybrcycc, raverace, ridgerac, ridgera2, acedrive,
   victlap, sidebs, vr, sf2049 all exit 0, no black frame.
+
+### Continued, 2026-11-23: upstream merge (Taito JC cracks, Voodoo chroma range)
+
+- **Merge** of upstream (21 commits, d07b1397619), no conflict.
+  - fc1e9763dd0 (taitojc.cpp): the DSP's line intersection read now floors
+    the offset so a shared edge gives the same point both ways. Side by
+    Side 2 `-widescreen` demo, 71 captures old vs new exe: the thin blue
+    cracks across walls (cherry tree scene) are gone; the other differences
+    are edge pixels of polygons cut at the screen sides. Vulkan x2 still
+    equal to native (median 2.8). Whether this is the "road edge strip"
+    hole of 2026-11-14 is not confirmed.
+  - 6e95bdc80b6 (voodoo): the Banshee chromaRange register kept 28 bits,
+    dropping the enable bit 28; now 29 and latched per triangle. Our Vulkan
+    path already reads the register per triangle and the shader handles the
+    range. Old vs new native: sf2049, sf2049se, cartfury, thrild2, gticlub2
+    identical (xtrial varies per run, RTC), so no visible case found yet.
+- Bench native/x2 on the new exe: sf2049, sf2049se, cartfury, thrild2,
+  xtrial, gticlub2, dangcurv, sidebs exit 0, no black frame.

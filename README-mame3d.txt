@@ -166,6 +166,13 @@ Display
   a background that does not extend past the 4:3 screen (HNG64 menus) is
   stretched with the rest.
 
+Since mame3d 0.289-2641-gead95f7
+- Merge of upstream MAME from 2026-11-23 (21 commits). Taito JC (Side by
+  Side 1/2, Dangerous Curves): the polygons cut at the screen edges no
+  longer leave thin cracks (the sky showing through walls and road), also
+  at high resolution. Voodoo Banshee/Voodoo 3: the chroma range mode is no
+  longer switched off.
+
 Since mame3d 0.289-2595-gc1d1cc1
 - Merge of upstream MAME from 2026-11-22 (43 commits). Dangerous Curves
   (Taito JC) now works in MAME, 3D included; its 3D is drawn at high
@@ -329,7 +336,7 @@ Since MAME njz3 FFB edition 0.289-1946-g8e81ca4
 - Capcom link (CPS2): the USART buffer is no longer emptied by the network
   thread.
 
-Based on upstream MAME from 2026-11-22, with:
+Based on upstream MAME from 2026-11-23, with:
 
 - Option -write_directory / -writedir <folder> (or the write_directory key
   in mame.ini): everything MAME writes (mame.ini, ui.ini, plugin.ini, game
