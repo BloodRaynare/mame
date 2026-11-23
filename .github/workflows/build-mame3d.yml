@@ -7,6 +7,9 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
+      - name: Export processor count to GITHUB_ENV
+        run: echo "CPU_COUNT=$env:NUMBER_OF_PROCESSORS" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      
       - name: Checkout dev/mame3d branch
         uses: actions/checkout@v4
         with:
@@ -20,7 +23,7 @@ jobs:
       - name: Generate VS2022 Solution & Compile
         shell: cmd
         run: |
-          mingw32-make -j$NUMBER_OF_PROCESSORS TARGET=mame3d vs2022 MODERN_WIN_API=1 NOWERROR=1
+          mingw32-make -j${{ env.CPU_COUNT }} TARGET=mame3d vs2022 MODERN_WIN_API=1 NOWERROR=1
           msbuild build\projects\windows\mame\vs2022\mame.sln /p:Configuration=Release /p:Platform=x64 /m
 
       - name: Upload Compiled Binary
