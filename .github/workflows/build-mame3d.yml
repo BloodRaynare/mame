@@ -23,7 +23,7 @@ jobs:
       - name: Generate VS2022 Solution & Compile
         shell: cmd
         run: |
-          mingw32-make -j${{ env.CPU_COUNT }} vs2022 MODERN_WIN_API=1 NOWERROR=1 SUBTARGET=mame3d SOURCES=src/mame/sega/model1.cpp,src/mame/namco/namcos21.cpp,src/mame/namco/namcos22.cpp,src/mame/konami/gticlub.cpp,src/mame/konami/zr107.cpp,src/mame/williams/seattle.cpp,src/mame/williams/vegas.cpp,src/mame/konami/nwk-tr.cpp,src/mame/konami/viper.cpp,src/mame/williams/midvunit.cpp,src/mame/williams/midzeus.cpp,src/mame/taito/taitojc.cpp,src/mame/gaelco/gaelco3d.cpp,src/mame/snk/hng64.cpp,src/mame/namco/namcos23.cpp,src/mame/namco/namcos10.cpp,src/mame/namco/namcos11.cpp,src/mame/namco/namcos12.cpp,src/mame/konami/konamigq.cpp,src/mame/konami/konamigv.cpp,src/mame/konami/ksys573.cpp,src/mame/sony/zn.cpp,src/mame/sony/taitogn.cpp
+          mingw32-make -j${{ env.CPU_COUNT }} vs2022_clang MODERN_WIN_API=1 NOWERROR=1 SUBTARGET=mame3d SOURCES=src/mame/sega/model1.cpp,src/mame/namco/namcos21.cpp,src/mame/namco/namcos22.cpp,src/mame/konami/gticlub.cpp,src/mame/konami/zr107.cpp,src/mame/williams/seattle.cpp,src/mame/williams/vegas.cpp,src/mame/konami/nwk-tr.cpp,src/mame/konami/viper.cpp,src/mame/williams/midvunit.cpp,src/mame/williams/midzeus.cpp,src/mame/taito/taitojc.cpp,src/mame/gaelco/gaelco3d.cpp,src/mame/snk/hng64.cpp,src/mame/namco/namcos23.cpp,src/mame/namco/namcos10.cpp,src/mame/namco/namcos11.cpp,src/mame/namco/namcos12.cpp,src/mame/konami/konamigq.cpp,src/mame/konami/konamigv.cpp,src/mame/konami/ksys573.cpp,src/mame/sony/zn.cpp,src/mame/sony/taitogn.cpp
           msbuild build\projects\windows\mamemame3d\vs2022\mamemame3d.sln /p:Configuration=Release /p:Platform=x64 /m
 
       - name: Upload Compiled Binary
