@@ -1402,3 +1402,26 @@ known).
   lighting (white diffuse/specular, one light), additive blending off and
   the texture switch bits unknown.
 - batlgear (BIOS 1.11a): only the boot and the warning screen were seen.
+
+### Continued, 2026-11-22: validity box, vr 16:9 frame, upstream merge
+
+- **vr in a 16:9 frame on a 4:3 screen** (cabinet clone at 640x480):
+  upstream's vr.lay only has a "Wide (16:9)" view, picked by `view auto`.
+  Not a mame3d issue; on 4:3 screens use `view  Screen 0 Standard (4:3)`
+  (vr.ini, set by Build-Config on the cabinets' 4:3 profiles).
+- **Validity box at exit** (game picked from MAME's system list): the
+  startup check of the shared source failed on the SWTPC 8212 keypad names
+  with arrows. MSVC with `/Zc:u8EscapeEncoding` (genie.lua since
+  a511e3a4e81) stores `↑` in a u8 literal as the single byte 0x91;
+  hex escapes are code units with that flag. Fixed in swtpc8212.cpp
+  (5f94ff07b1b): no racing driver fails `-validate` any more (2395 failing
+  drivers down to 950, the rest are home computer keyboards with the same
+  cause).
+- **Merge** of upstream (43 commits, 113eb15ff5b). Conflict in namcos22.h:
+  upstream moved the Super System 22 sprites to `namcos22s_state` (VICS
+  copies to sprite RAM at vblank, 16-bit sprite RAM); our declarations kept
+  only the text layer mix signature and `sci_int_w`. Dangerous Curves now
+  runs with its 3D upstream (DSP routines patched in, clip flag registers):
+  race reached, Vulkan x2 equal to native. Bench native/x2: dangcurv,
+  dirtdash, alpinerd, cybrcycc, raverace, ridgerac, ridgera2, acedrive,
+  victlap, sidebs, vr, sf2049 all exit 0, no black frame.
