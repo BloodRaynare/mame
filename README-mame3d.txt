@@ -64,17 +64,20 @@ High resolution 3D
 Games tested with GPU acceleration (Vulkan)
 These games run with -hires3d 2 to 4 on the graphics card: started, demo
 then a game with coin, Start and accelerator, no error, no black frame, the
-picture compared with native. Last run: 2026-11-18, -hires3d 2, on an
+picture compared with native. Last runs: 2026-11-18 to 23, -hires3d 2, on an
 NVIDIA GeForce RTX 3050 Laptop GPU (the earlier runs also went from x1 to x4,
 with and without -widescreen).
     Sega Model 1           : vr (Virtua Racing), vformula (Virtua Formula),
                              wingwar (Wing War), netmerc (NetMerc)
-    Namco System 21        : winrun (Winning Run), driveyes (Driver's Eyes)
+    Namco System 21        : winrun (Winning Run), winrun91 (Winning Run
+                             '91), winrungp (Winning Run: Suzuka GP),
+                             driveyes (Driver's Eyes)
     Namco System 22 / S22  : ridgerac (Ridge Racer), ridgera2 (Ridge Racer
                              2), raverace (Rave Racer), acedrive (Ace
                              Driver), victlap (Ace Driver: Victory Lap),
                              cybrcycc (Cyber Cycles), dirtdash (Dirt Dash),
-                             alpinerd (Alpine Racer)
+                             alpinerd and alpinerc (Alpine Racer), alpinr2b
+                             (Alpine Racer 2), aquajet (Aqua Jet)
     Konami K001005         : gticlub (GTI Club), midnrun (Midnight Run),
                              windheat (Winding Heat)
     3dfx Voodoo 1/2        : sfrush (San Francisco Rush), calspeed
@@ -90,7 +93,7 @@ with and without -widescreen).
                              World), offroadc (Off Road Challenge)
     Midway Zeus 2          : crusnexo (Cruis'n Exotica)
     Taito JC               : sidebs (Side by Side), sidebs2 (Side by Side 2),
-                             dangcurv (Dangerous Curves)
+                             dangcurv and dangcurvj (Dangerous Curves)
     Gaelco 3D              : speedup (Speed Up), surfplnt (Surf Planet),
                              radikalb (Radikal Bikers)
     SNK Hyper Neo Geo 64   : roadedge (Roads Edge), xrally (Xtreme Rally)
@@ -165,6 +168,22 @@ Display
   leaves black on the sides. With -widescreen_bg and -widescreen_2d stretch,
   a background that does not extend past the 4:3 screen (HNG64 menus) is
   stretched with the rest.
+
+Since mame3d 0.289-2664-g7c5dda3
+- The driver warning screen ("This machine has known problems...",
+  "Press any key to continue") was shown again at start-up since
+  0.289-2539-gf7e5713: an upstream merge undid the no-nag change. Games
+  marked not working or imperfect (Thrill Drive 2, Race On!...) waited on
+  it for a key. Fixed again.
+
+Since mame3d 0.289-2641-gead95f7
+- Merge of upstream MAME from 2026-11-23 (21 commits). Taito JC (Side by
+  Side 1/2, Dangerous Curves): the polygons cut at the screen edges no
+  longer leave thin cracks (the sky showing through walls and road), also
+  at high resolution. Voodoo Banshee/Voodoo 3: the chroma range mode is no
+  longer switched off.
+- Also tested on Vulkan: Winning Run '91, Winning Run: Suzuka GP, Alpine
+  Racer 2, Aqua Jet, Dangerous Curves (Japan) (see High resolution 3D).
 
 Since mame3d 0.289-2595-gc1d1cc1
 - Merge of upstream MAME from 2026-11-22 (43 commits). Dangerous Curves
@@ -329,7 +348,7 @@ Since MAME njz3 FFB edition 0.289-1946-g8e81ca4
 - Capcom link (CPS2): the USART buffer is no longer emptied by the network
   thread.
 
-Based on upstream MAME from 2026-11-22, with:
+Based on upstream MAME from 2026-11-23, with:
 
 - Option -write_directory / -writedir <folder> (or the write_directory key
   in mame.ini): everything MAME writes (mame.ini, ui.ini, plugin.ini, game
